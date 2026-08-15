@@ -473,30 +473,6 @@ tr:hover td{background:var(--bg3)}
   </div>
 </div>
 
-<!-- MODAL Risultato Girone -->
-<div class="overlay" id="modal-gris">
-  <div class="modal">
-    <h3 id="mgris-title">Risultato</h3>
-    <div id="mgris-body"></div>
-    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
-      <button class="btn btn-ghost" onclick="closeModal('modal-gris')">Annulla</button>
-      <button class="btn btn-gold" onclick="salvaGris()">Salva</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL Risultato Tabellone -->
-<div class="overlay" id="modal-tris">
-  <div class="modal">
-    <h3 id="mtris-title">Risultato</h3>
-    <div id="mtris-body"></div>
-    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
-      <button class="btn btn-ghost" onclick="closeModal('modal-tris')">Annulla</button>
-      <button class="btn btn-gold" onclick="salvaTris()">Salva</button>
-    </div>
-  </div>
-</div>
-
 <script>
 /* ── STATE ─────────────────────────────────────────── */
 let S={parts:[],numGironi:2,gironi:[],tabelloni:{A:null,B:null},qualAssign:{}};
@@ -546,7 +522,21 @@ function addPart(){
   save();renderParts();updateStats();
   document.getElementById('i-nome').focus();
 }
-function removePart(id){S.parts=S.parts.filter(p=>p.id!==id);save();renderParts();updateStats();}
+function removePart(id){
+  S.parts=S.parts.filter(p=>p.id!==id);
+  // rimuovi anche da eventuali gironi già creati: senza questo il giocatore
+  // resterebbe "?" negli incontri ma ancora valido (e qualificabile) in classifica
+  if(S.gironi&&S.gironi.length){
+    S.gironi.forEach(g=>{
+      g.parts=g.parts.filter(p=>p.id!==id);
+      g.incontri=g.incontri.filter(inc=>inc.p1!==id&&inc.p2!==id);
+    });
+  }
+  if(S.qualAssign)delete S.qualAssign[id];
+  save();renderParts();updateStats();
+  if(S.gironi&&S.gironi.length)renderGironi();
+  renderQualAssign();
+}
 function sortParts(field){
   if(field==='cat'){
     S.parts.sort((a,b)=>{
@@ -560,7 +550,7 @@ function sortParts(field){
 }
 function clearAll(){
   if(!confirm('Svuotare tutto (partecipanti, gironi, tabelloni)?'))return;
-  S={parts:[],numGironi:2,gironi:[],tabelloni:{A:null,B:null}};
+  S={parts:[],numGironi:2,gironi:[],tabelloni:{A:null,B:null},qualAssign:{}};
   save();renderParts();updateStats();
 }
 function updateStats(){
@@ -662,9 +652,6 @@ function computeClass(g){
     });
     return{sv,sp,diff:sv-sp,wins};
   }
-
-  // Categoria: numerico se possibile, altrimenti stringa (più alto = posizione peggiore)
-  function catVal(c){const n=parseFloat(c);return isNaN(n)?c:-n;} // invertiamo: cat alta → valore basso → posizione peggiore
 
   arr.sort((a,b)=>{
     // 1. Punti (decrescente)
@@ -901,12 +888,11 @@ function renderGironeContent(g,gi){
   let clH='<table><thead><tr><th></th><th>Giocatore</th><th>Pt</th><th>SV</th><th>SP</th><th>Diff</th><th style="text-align:center">Tab.</th></tr></thead><tbody>';
   cl.forEach((r,ri)=>{
     const pc=ri===0?'pos-1':ri===1?'pos-2':ri===2?'pos-3':'pos-x';
-    const qa=getQualEntry(r.nome); // 'A' | 'B' | null | undefined
+    const qa=getQualEntry(r.id); // 'A' | 'B' | null | undefined
     const isA=qa==='A', isB=qa==='B', isNone=!isA&&!isB;
-    const safeNome=r.nome.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
-    const bA=`<span class="board-badge bb-a${isA?' active':''}" data-sbn="${safeNome}" data-sbv="A" title="Tabellone A">A</span>`;
-    const bB=`<span class="board-badge bb-b${isB?' active':''}" data-sbn="${safeNome}" data-sbv="B" title="Tabellone B">B</span>`;
-    const bX=`<span class="board-badge bb-x${isNone?' active':''}" data-sbn="${safeNome}" data-sbv="" title="Escludi">–</span>`;
+    const bA=`<span class="board-badge bb-a${isA?' active':''}" data-sbn="${r.id}" data-sbv="A" title="Tabellone A">A</span>`;
+    const bB=`<span class="board-badge bb-b${isB?' active':''}" data-sbn="${r.id}" data-sbv="B" title="Tabellone B">B</span>`;
+    const bX=`<span class="board-badge bb-x${isNone?' active':''}" data-sbn="${r.id}" data-sbv="" title="Escludi">–</span>`;
     clH+=`<tr><td><span class="pos-badge ${pc}">${ri+1}</span></td>
       <td>${esc(r.nome)}</td>
       <td style="font-weight:700;color:var(--gold)">${r.punti}</td>
@@ -951,7 +937,15 @@ function inlineScore(gi,ii,side,val){
 function inlineVinc(gi,ii,pid){
   const inc=S.gironi[gi].incontri[ii];
   // toggle: click same winner again to deselect
-  inc.vinc=(String(inc.vinc)===String(pid))?null:pid;
+  const newVinc=(String(inc.vinc)===String(pid))?null:pid;
+  // se ci sono già punteggi che indicano un vincitore diverso, chiedi conferma
+  if(newVinc!==null&&inc.s1!==null&&inc.s2!==null){
+    const scoreWin=inc.s1>inc.s2?inc.p1:(inc.s2>inc.s1?inc.p2:null);
+    if(scoreWin!==null&&String(scoreWin)!==String(newVinc)){
+      if(!confirm(`Il punteggio inserito (${inc.s1}-${inc.s2}) indica un altro vincitore. Assegnare comunque la vittoria a questo giocatore?`))return;
+    }
+  }
+  inc.vinc=newVinc;
   save();
   refreshGironeTab(gi);
 }
@@ -960,36 +954,6 @@ function refreshGironeTab(gi){
   if(el&&S.gironi[gi])el.innerHTML=renderGironeContent(S.gironi[gi],gi);
 }
 
-let _gi=-1,_ii=-1;
-function openGris(gi,ii){
-  _gi=gi;_ii=ii;
-  const g=S.gironi[gi],inc=g.incontri[ii],pm=pMap();
-  const p1=pm[inc.p1],p2=pm[inc.p2];
-  document.getElementById('mgris-title').textContent=`${p1?.nome||'?'} vs ${p2?.nome||'?'} – G.${inc.gior}`;
-  document.getElementById('mgris-body').innerHTML=`
-    <div style="display:flex;align-items:center;gap:10px;justify-content:center;padding:14px 0">
-      <span style="flex:1;text-align:right;font-weight:600">${esc(p1?.nome||'')}</span>
-      <input type="number" id="gs1" min="0" value="${inc.s1??''}" style="width:65px;text-align:center" placeholder="Set">
-      <span style="color:var(--text2)">—</span>
-      <input type="number" id="gs2" min="0" value="${inc.s2??''}" style="width:65px;text-align:center" placeholder="Set">
-      <span style="flex:1;font-weight:600">${esc(p2?.nome||'')}</span>
-    </div>
-    <div class="fg"><label>Vincitore</label>
-      <select id="gvinc">
-        <option value="">— In corso / Non assegnato —</option>
-        <option value="${inc.p1}" ${inc.vinc===inc.p1?'selected':''}>${esc(p1?.nome||'')}</option>
-        <option value="${inc.p2}" ${inc.vinc===inc.p2?'selected':''}>${esc(p2?.nome||'')}</option>
-      </select></div>`;
-  openModal('modal-gris');
-}
-function salvaGris(){
-  const inc=S.gironi[_gi].incontri[_ii];
-  const s1=document.getElementById('gs1').value,s2=document.getElementById('gs2').value;
-  inc.s1=s1!==''?Number(s1):null;inc.s2=s2!==''?Number(s2):null;
-  inc.vinc=document.getElementById('gvinc').value||null;
-  save();closeModal('modal-gris');
-  refreshGironeTab(_gi);
-}
 
 /* ── TABELLONE ─────────────────────────────────────── */
 const SEED_MAP={
@@ -1001,16 +965,16 @@ const SEED_MAP={
       3,62,35,30,19,46,51,14,11,54,43,22,27,38,59,6,7,58,39,26,23,42,55,10,15,50,47,18,31,34,63,2]
 };
 /* ── QUALIFICATI ASSIGNMENT ────────────────────────── */
-// S.qualAssign = {nome -> 'A'|'B'|null}  — mappa semplice per nome
+// S.qualAssign = {id partecipante -> 'A'|'B'|null}  — mappa per id (non per nome, per non confondere omonimi)
 
-function getQualEntry(nome){
+function getQualEntry(id){
   if(!S.qualAssign)return undefined;
-  return Object.prototype.hasOwnProperty.call(S.qualAssign,nome)?S.qualAssign[nome]:undefined;
+  return Object.prototype.hasOwnProperty.call(S.qualAssign,id)?S.qualAssign[id]:undefined;
 }
 
-function setBoard(nome,board){
+function setBoard(id,board){
   if(!S.qualAssign)S.qualAssign={};
-  S.qualAssign[nome]=board;
+  S.qualAssign[id]=board;
   save();
   // aggiorna solo i tab dei gironi già renderizzati
   S.gironi.forEach((_,gi)=>refreshGironeTab(gi));
@@ -1026,25 +990,14 @@ function proponiQual(){
     const cl=computeClass(g);
     cl.forEach((r,ri)=>{
       // only set if not already manually set
-      if(!Object.prototype.hasOwnProperty.call(S.qualAssign,r.nome)){
-        S.qualAssign[r.nome]=ri<nPerGirone?'A':(ri<nPerGirone*2?'B':null);
+      if(!Object.prototype.hasOwnProperty.call(S.qualAssign,r.id)){
+        S.qualAssign[r.id]=ri<nPerGirone?'A':(ri<nPerGirone*2?'B':null);
       }
     });
   });
   save();
   S.gironi.forEach((_,gi)=>refreshGironeTab(gi));
   renderQualAssign();
-}
-
-function svuotaQual(){
-  S.qualAssign={};save();
-  renderQualAssign();
-  document.querySelectorAll('.gtab').forEach(el=>{
-    if(el.style.display!=='none'){
-      const gi=parseInt(el.id.replace('gtab-',''));
-      if(!isNaN(gi))refreshGironeTab(gi);
-    }
-  });
 }
 
 function resetBoardAssignment(){
@@ -1064,17 +1017,16 @@ function renderQualAssign(){
   const all=[];
   S.gironi.forEach((g,gi)=>{
     computeClass(g).forEach((r,ri)=>{
-      const b=getQualEntry(r.nome);
-      all.push({nome:r.nome,girone:g.nome,rank:ri+1,board:b!==undefined?b:null});
+      const b=getQualEntry(r.id);
+      all.push({id:r.id,nome:r.nome,girone:g.nome,rank:ri+1,board:b!==undefined?b:null});
     });
   });
 
   const chip=(q)=>{
     const rk=q.rank===1?'rk1':q.rank===2?'rk2':q.rank===3?'rk3':'rkx';
-    const safeNome2=q.nome.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
-    const bA=`<span class="board-badge bb-a${q.board==='A'?' active':''}" data-sbn="${safeNome2}" data-sbv="A">A</span>`;
-    const bB=`<span class="board-badge bb-b${q.board==='B'?' active':''}" data-sbn="${safeNome2}" data-sbv="B">B</span>`;
-    const bX=`<span class="board-badge bb-x${q.board===null?' active':''}" data-sbn="${safeNome2}" data-sbv="">–</span>`;
+    const bA=`<span class="board-badge bb-a${q.board==='A'?' active':''}" data-sbn="${q.id}" data-sbv="A">A</span>`;
+    const bB=`<span class="board-badge bb-b${q.board==='B'?' active':''}" data-sbn="${q.id}" data-sbv="B">B</span>`;
+    const bX=`<span class="board-badge bb-x${q.board===null?' active':''}" data-sbn="${q.id}" data-sbv="">–</span>`;
     return `<div class="qual-chip">
       <span class="qc-rank ${rk}">${q.rank}</span>
       <span class="qc-nome" title="${esc(q.nome)}">${esc(q.nome)}</span>
@@ -1103,42 +1055,27 @@ function renderQualAssign(){
 function getQual(board){
   const seedMode=parseInt((document.getElementById('sel-seed')||{}).value)||2;
   const classifiche=S.gironi.map(g=>computeClass(g));
-  // Build ordered list respecting seedMode
-  const ordered=[];
+  // Build ordered list with girone/rank info, rispettando il seedMode
+  const orderedFull=[];
   if(seedMode===2){
     // Blocco 2: primi 2 di ogni girone, poi i successivi uno alla volta
     let sp=0,step=2,maxP=Math.max(...classifiche.map(c=>c.length),0);
     while(sp<maxP){
-      classifiche.forEach(cl=>{for(let p=sp;p<Math.min(sp+step,cl.length);p++)ordered.push(cl[p]);});
+      classifiche.forEach((cl,gi)=>{
+        for(let p=sp;p<Math.min(sp+step,cl.length);p++)
+          orderedFull.push({nome:cl[p].nome,id:cl[p].id,rank:p+1,gironeIdx:gi});
+      });
       sp+=step;step=1;
     }
   } else {
     // Ordine manuale: giocatore per giocatore, girone per girone
     const maxP=Math.max(...classifiche.map(c=>c.length),0);
-    for(let p=0;p<maxP;p++)classifiche.forEach(cl=>{if(p<cl.length)ordered.push(cl[p]);});
-  }
-  // Build full ordered list with girone/rank info
-  // ordered items are computeClass results: {nome, id, ...}
-  // We need to track which girone each player comes from
-  const orderedFull=[];
-  if(seedMode===2){
-    let sp=0,step=2,maxP=Math.max(...classifiche.map(c=>c.length),0);
-    while(sp<maxP){
-      classifiche.forEach((cl,gi)=>{
-        for(let p=sp;p<Math.min(sp+step,cl.length);p++)
-          orderedFull.push({nome:cl[p].nome,rank:p+1,gironeIdx:gi});
-      });
-      sp+=step;step=1;
-    }
-  } else {
-    const maxP=Math.max(...classifiche.map(c=>c.length),0);
     for(let p=0;p<maxP;p++)
-      classifiche.forEach((cl,gi)=>{if(p<cl.length)orderedFull.push({nome:cl[p].nome,rank:p+1,gironeIdx:gi});});
+      classifiche.forEach((cl,gi)=>{if(p<cl.length)orderedFull.push({nome:cl[p].nome,id:cl[p].id,rank:p+1,gironeIdx:gi});});
   }
-  if(S.qualAssign&&Object.keys(S.qualAssign).length){
-    return orderedFull.filter(r=>getQualEntry(r.nome)===board);
-  }
-  return orderedFull;
+  // Solo chi è stato esplicitamente assegnato a questo tabellone (per id, non per nome:
+  // così due omonimi possono finire su tabelloni diversi senza confondersi)
+  return orderedFull.filter(r=>getQualEntry(r.id)===board);
 }
 
 function creaTabellone(){
@@ -1277,12 +1214,15 @@ function tabInlineScore(board,ri,mi,side,val){
 function tabSetWin(board,ri,mi,winner,force=false){
   const tab=S.tabelloni[board];if(!tab)return;
   const m=tab.rounds[ri][mi];
+  const oldWin=m.win;
   // se force=true assegna direttamente (da inlineScore), altrimenti toggle (da click manuale)
   m.win=force?winner:(m.win===winner?null:winner);
   if(m.win){
     // propaga al round successivo
     if(ri+1<tab.rounds.length){
       const ni=Math.floor(mi/2),nm=tab.rounds[ri+1][ni];
+      // se il vincitore cambia rispetto a prima ed era già avanzato oltre, ripulisci lo stato "fantasma"
+      if(oldWin&&oldWin!==m.win&&nm.win===oldWin)clearCascade(board,ri+1,ni);
       if(mi%2===0)nm.p1=m.win; else nm.p2=m.win;
     }
   } else {
@@ -1311,13 +1251,6 @@ function clearCascade(board,ri,mi){
     }
   }
 }
-// Handle bye auto-advance (keep for compatibility)
-function advWin(board,ri,mi,win,s1,s2){
-  const tab=S.tabelloni[board];const m=tab.rounds[ri][mi];
-  m.win=win;m.sc1=s1;m.sc2=s2;
-  if(ri+1<tab.rounds.length){const ni=Math.floor(mi/2),nm=tab.rounds[ri+1][ni];if(mi%2===0)nm.p1=win;else nm.p2=win;}
-}
-
 /* ── PDF ENGINE ────────────────────────────────────── */
 const PDF_CSS=`
   @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;700;900&family=Barlow:wght@400;600&display=swap');
@@ -1423,7 +1356,7 @@ function pdfGironi(){
     // Classifica table
     let clT=`<table><thead><tr><th>#</th><th>Giocatore</th><th>Cat</th><th>Pt</th><th>SV</th><th>SP</th><th>Diff</th><th>Tab.</th></tr></thead><tbody>`;
     cl.forEach((r,ri)=>{
-      const qe=getQualEntry(r.nome);
+      const qe=getQualEntry(r.id);
       const tabLabel=qe==='A'?'A':qe==='B'?'B':'—';
       const tabColor=qe==='A'?'#1565c0':qe==='B'?'#6a1b9a':'#999';
       clT+=`<tr><td>${ri+1}</td><td>${esc(r.nome)}</td>
@@ -1624,7 +1557,7 @@ function importAnagFile(evt){
   const reader=new FileReader();
   reader.onload=e=>{
     const content=e.target.result;
-    let added=0;
+    let added=0,total=0;
     try{
       if(file.name.endsWith('.json')){
         const data=JSON.parse(content);
@@ -1632,7 +1565,9 @@ function importAnagFile(evt){
         data.forEach(p=>{
           const nome=String(p.nome||'').trim();
           const cat=String(p.cat||'').trim();
-          if(nome&&!ANAG.find(x=>x.nome.toLowerCase()===nome.toLowerCase())){
+          if(!nome)return;
+          total++;
+          if(!ANAG.find(x=>x.nome.toLowerCase()===nome.toLowerCase())){
             ANAG.push({id:Date.now()+Math.random(),nome,cat});added++;
           }
         });
@@ -1641,14 +1576,16 @@ function importAnagFile(evt){
         content.replace(/^\ufeff/,'').split('\n').forEach((line,i)=>{
           if(i===0&&line.toLowerCase().startsWith('nome'))return; // salta header
           const[nome,cat='']= line.split(';').map(x=>x.trim());
-          if(nome&&!ANAG.find(x=>x.nome.toLowerCase()===nome.toLowerCase())){
+          if(!nome)return;
+          total++;
+          if(!ANAG.find(x=>x.nome.toLowerCase()===nome.toLowerCase())){
             ANAG.push({id:Date.now()+Math.random(),nome,cat});added++;
           }
         });
       }
       saveAnag();renderAnag();
       closeModal('modal-anag-import');
-      alert('✅ Importati '+added+' giocatori'+(added<(file.name.endsWith('.json')?JSON.parse(content).length:content.split('\n').length-1)?' (duplicati ignorati)':'')+'.');
+      alert('✅ Importati '+added+' giocatori'+(added<total?' (duplicati ignorati)':'')+'.');
     }catch(err){alert('❌ Errore: '+err.message);}
   };
   reader.readAsText(file,'UTF-8');
@@ -1697,15 +1634,6 @@ function toggleQualPanel(){
   if(container)container.style.display=_qualPanelOpen?'':'none';
   if(btn)btn.textContent=(_qualPanelOpen?'▼':'▶')+' Qualificati';
 }
-
-// Apri picker anagrafica: renderizza la lista al momento dell'apertura
-document.getElementById('modal-anagrafica-pick').addEventListener('click', e=>{
-  // trigger render quando il modal si apre (delegato sull'overlay)
-},{once:false});
-// Override openModal per inizializzare il picker
-const _origOpenModal=openModal;
-// Non sovrascriviamo openModal — usiamo l'event sull'overlay
-document.getElementById('modal-anagrafica-pick').addEventListener('transitionend',()=>{},{passive:true});
 
 // Event delegation for board-badge clicks
 document.addEventListener('click', e=>{

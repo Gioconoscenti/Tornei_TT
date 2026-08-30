@@ -37,6 +37,7 @@ main{padding:22px;max-width:1340px;margin:0 auto}
 /* GRID */
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
 
 /* INPUTS */
 input,select,textarea{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);color:var(--text);padding:7px 11px;font-family:'Barlow',sans-serif;font-size:.88rem;width:100%;outline:none;transition:border-color .18s}
@@ -199,6 +200,7 @@ tr:hover td{background:var(--bg3)}
   main{padding:14px 12px;}
   .grid2{grid-template-columns:1fr;}
   .grid3{grid-template-columns:1fr 1fr;}
+  .grid4{grid-template-columns:1fr 1fr;}
   .qual-cols{grid-template-columns:1fr 1fr;}
   .nav-tab span{display:none;}
   header{padding:0 12px;gap:8px;}
@@ -216,6 +218,7 @@ tr:hover td{background:var(--bg3)}
   /* Layout generale */
   main{padding:10px 8px;}
   .grid3{grid-template-columns:1fr;}
+  .grid4{grid-template-columns:1fr;}
   .qual-cols{grid-template-columns:1fr;}
   .stat-row{gap:6px;}
   .stat-box{padding:8px 10px;min-width:70px;}
@@ -274,7 +277,7 @@ tr:hover td{background:var(--bg3)}
   </div>
   <nav class="nav-tabs">
     <button class="nav-tab" data-sec="anagrafica">📋 Anagrafica</button>
-    <button class="nav-tab active" data-sec="partecipanti">👥 Torneo</button>
+    <button class="nav-tab active" data-sec="partecipanti">👥 Partecipanti Torneo</button>
     <button class="nav-tab" data-sec="gironi">🏅 Gironi</button>
     <button class="nav-tab" data-sec="tabellone">🏆 Tabellone</button>
   </nav>
@@ -296,6 +299,7 @@ tr:hover td{background:var(--bg3)}
       Anagrafica Giocatori
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <button class="btn btn-ghost btn-sm" onclick="sortAnag('cat')">↕ Categoria</button>
+        <button class="btn btn-ghost btn-sm" onclick="sortAnag('ranking')">↕ Ranking</button>
         <button class="btn btn-ghost btn-sm" onclick="sortAnag('nome')">↕ Alfabetico</button>
         <button class="btn btn-ghost btn-sm" onclick="openModal('modal-anag-import')">📥 Importa</button>
         <button class="btn btn-green btn-sm" onclick="exportAnagJson()">💾 Esporta JSON</button>
@@ -306,6 +310,12 @@ tr:hover td{background:var(--bg3)}
     <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
       <input id="anag-nome" placeholder="Nome" style="flex:2;min-width:140px" onkeydown="if(event.key==='Enter')addAnag()">
       <input id="anag-cat" placeholder="Categoria" style="flex:1;min-width:80px" onkeydown="if(event.key==='Enter')addAnag()">
+      <input id="anag-ranking" placeholder="Ranking" style="flex:1;min-width:90px" onkeydown="if(event.key==='Enter')addAnag()">
+      <select id="anag-genere" style="flex:1;min-width:90px">
+        <option value="">Genere —</option>
+        <option value="M">M</option>
+        <option value="F">F</option>
+      </select>
       <button class="btn btn-gold" onclick="addAnag()">+ Aggiungi</button>
     </div>
     <div id="anag-wrap"><div class="empty">Nessun giocatore in anagrafica.</div></div>
@@ -319,9 +329,9 @@ tr:hover td{background:var(--bg3)}
     <div class="stat-box"><div class="num" id="s-cat">0</div><div class="lbl">Categorie</div></div>
     <div class="stat-box">
       <div style="display:flex;align-items:center;justify-content:center;gap:6px;min-height:40px">
-        <input type="number" id="num-gironi" min="1" max="20" value="2"
+        <input type="number" id="num-gironi" class="num-gironi-input" min="1" max="20" value="2"
           style="width:60px;text-align:center;font-size:1.4rem;font-family:'Barlow Condensed',sans-serif;font-weight:900;color:var(--gold);"
-          oninput="updateStats()">
+          oninput="updateStats(this.value)">
       </div>
       <div class="lbl">N° Gironi</div>
     </div>
@@ -329,14 +339,22 @@ tr:hover td{background:var(--bg3)}
 
   <div class="card">
     <div class="card-title">Aggiungi Partecipante</div>
-    <div class="grid3">
+    <div class="grid4">
       <div class="fg"><label>Nome</label><input id="i-nome" placeholder="Es. Mario Rossi" onkeydown="if(event.key==='Enter')addPart()"></div>
       <div class="fg"><label>Categoria</label><input id="i-cat" placeholder="Es. 5" onkeydown="if(event.key==='Enter')addPart()"></div>
-      <div class="fg" style="display:flex;align-items:flex-end;gap:6px">
-        <button class="btn btn-gold" onclick="addPart()">+ Aggiungi</button>
-        <button class="btn btn-ghost" onclick="openModal('modal-import')">📋 Importa testo</button>
-        <button class="btn btn-blue" onclick="openModal('modal-anagrafica-pick')">📋 Da anagrafica</button>
+      <div class="fg"><label>Ranking</label><input id="i-ranking" placeholder="Es. 1200" onkeydown="if(event.key==='Enter')addPart()"></div>
+      <div class="fg"><label>Genere</label>
+        <select id="i-genere">
+          <option value="">—</option>
+          <option value="M">M</option>
+          <option value="F">F</option>
+        </select>
       </div>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <button class="btn btn-gold" onclick="addPart()">+ Aggiungi</button>
+      <button class="btn btn-ghost" onclick="openModal('modal-import')">📋 Importa testo</button>
+      <button class="btn btn-blue" onclick="openModal('modal-anagrafica-pick')">📋 Da anagrafica</button>
     </div>
   </div>
 
@@ -345,6 +363,7 @@ tr:hover td{background:var(--bg3)}
       Lista Partecipanti
       <div style="display:flex;gap:6px">
         <button class="btn btn-ghost btn-sm" onclick="sortParts('cat')">↕ Categoria</button>
+        <button class="btn btn-ghost btn-sm" onclick="sortParts('ranking')">↕ Ranking</button>
         <button class="btn btn-ghost btn-sm" onclick="sortParts('nome')">↕ Alfabetico</button>
         <button class="btn btn-red btn-sm" onclick="clearAll()">🗑 Svuota</button>
       </div>
@@ -356,6 +375,11 @@ tr:hover td{background:var(--bg3)}
 <!-- GIRONI -->
 <section id="sec-gironi" class="section">
   <div class="action-bar">
+    <div class="fg" style="margin:0;display:flex;align-items:center;gap:7px">
+      <label style="margin:0;white-space:nowrap">N° Gironi:</label>
+      <input type="number" id="num-gironi-g" class="num-gironi-input" min="1" max="20" value="2"
+        style="width:60px;text-align:center" oninput="updateStats(this.value)">
+    </div>
     <button class="btn btn-gold" onclick="creaGironi()">⚙️ Crea / Ricrea Gironi</button>
     <button class="btn btn-ghost" id="btn-edit-gironi" onclick="toggleEditGironi()">✏️ Modifica Gironi</button>
     <button class="btn btn-ghost" onclick="renderGironi()">📊 Aggiorna</button>
@@ -399,13 +423,6 @@ tr:hover td{background:var(--bg3)}
           <option value="16">16</option><option value="32">32</option><option value="64">64</option>
         </select>
       </div>
-      <div class="fg" style="margin:0;display:flex;align-items:center;gap:7px">
-        <label style="margin:0;white-space:nowrap;font-size:.7rem">Seeding:</label>
-        <select id="sel-seed" style="width:150px;font-size:.8rem">
-          <option value="2">Blocco 2 per girone</option>
-          <option value="1">Ordine manuale</option>
-        </select>
-      </div>
       <button class="btn btn-gold" onclick="creaTabellone()">🏆 Genera Tabellone</button>
       <button class="btn btn-red btn-sm" onclick="resetTab()">Reset</button>
       <button class="btn btn-green" onclick="pdfTabellone()">🖨 PDF Tabelloni</button>
@@ -429,8 +446,8 @@ tr:hover td{background:var(--bg3)}
     </div>
     <div style="text-align:center;color:var(--text2);font-size:.8rem;margin:8px 0">— oppure incolla testo —</div>
     <div class="fg">
-      <label>Una riga per giocatore — formato: Nome;Categoria</label>
-      <textarea id="anag-import-txt" rows="7" placeholder="Mario Rossi;5&#10;Lucia Bianchi;4&#10;Giovanni Verdi"></textarea>
+      <label>Una riga per giocatore — formato: Nome;Categoria;Ranking;Genere (gli ultimi due sono opzionali)</label>
+      <textarea id="anag-import-txt" rows="7" placeholder="Mario Rossi;5;1200;M&#10;Lucia Bianchi;4;1100;F&#10;Giovanni Verdi"></textarea>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end">
       <button class="btn btn-ghost" onclick="closeModal('modal-anag-import')">Annulla</button>
@@ -463,8 +480,8 @@ tr:hover td{background:var(--bg3)}
   <div class="modal">
     <h3>📋 Importa Lista</h3>
     <div class="fg">
-      <label>Una riga per giocatore — formato: Nome;Categoria</label>
-      <textarea id="import-txt" rows="10" placeholder="Mario Rossi;5&#10;Lucia Bianchi;4&#10;Giovanni Verdi"></textarea>
+      <label>Una riga per giocatore — formato: Nome;Categoria;Ranking;Genere (gli ultimi due sono opzionali)</label>
+      <textarea id="import-txt" rows="10" placeholder="Mario Rossi;5;1200;M&#10;Lucia Bianchi;4;1100;F&#10;Giovanni Verdi"></textarea>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end">
       <button class="btn btn-ghost" onclick="closeModal('modal-import')">Annulla</button>
@@ -516,9 +533,13 @@ function addPart(){
   const nome=document.getElementById('i-nome').value.trim();
   if(!nome)return;
   const cat=document.getElementById('i-cat').value.trim()||'';
-  S.parts.push({id:Date.now()+Math.random(),nome,cat});
+  const ranking=document.getElementById('i-ranking').value.trim()||'';
+  const genere=document.getElementById('i-genere').value||'';
+  S.parts.push({id:Date.now()+Math.random(),nome,cat,ranking,genere});
   document.getElementById('i-nome').value='';
   document.getElementById('i-cat').value='';
+  document.getElementById('i-ranking').value='';
+  document.getElementById('i-genere').value='';
   save();renderParts();updateStats();
   document.getElementById('i-nome').focus();
 }
@@ -538,9 +559,9 @@ function removePart(id){
   renderQualAssign();
 }
 function sortParts(field){
-  if(field==='cat'){
+  if(field==='cat'||field==='ranking'){
     S.parts.sort((a,b)=>{
-      const c=String(a.cat||'').localeCompare(String(b.cat||''),undefined,{numeric:true});
+      const c=String(a[field]||'').localeCompare(String(b[field]||''),undefined,{numeric:true});
       return c!==0?c:a.nome.localeCompare(b.nome);
     });
   } else {
@@ -553,19 +574,27 @@ function clearAll(){
   S={parts:[],numGironi:2,gironi:[],tabelloni:{A:null,B:null},qualAssign:{}};
   save();renderParts();updateStats();
 }
-function updateStats(){
-  S.numGironi=parseInt(document.getElementById('num-gironi').value)||2;
+function updateStats(val){
+  // val arriva solo quando l'utente digita in uno dei campi "N° Gironi" (Partecipanti o Gironi,
+  // sono due input sincronizzati tra loro). Senza val, la funzione si limita a rispecchiare
+  // S.numGironi sui campi — è così che clearAll/resetTorneo/import aggiornano l'interfaccia.
+  if(val!==undefined)S.numGironi=parseInt(val)||1;
+  document.querySelectorAll('.num-gironi-input').forEach(el=>{
+    if(el!==document.activeElement)el.value=S.numGironi;
+  });
   document.getElementById('s-tot').textContent=S.parts.length;
   document.getElementById('s-cat').textContent=new Set(S.parts.map(p=>p.cat)).size;
 }
 function renderParts(){
   const w=document.getElementById('parts-wrap');
   if(!S.parts.length){w.innerHTML='<div class="empty">Nessun partecipante.</div>';return;}
-  let h='<table><thead><tr><th>#</th><th>Nome</th><th>Cat</th><th></th></tr></thead><tbody>';
+  let h='<table><thead><tr><th>#</th><th>Nome</th><th>Cat</th><th>Ranking</th><th>Genere</th><th></th></tr></thead><tbody>';
   S.parts.forEach((p,i)=>{
     h+=`<tr><td style="color:var(--text2);width:28px">${i+1}</td>
       <td>${esc(p.nome)}</td>
       <td><span class="badge badge-cat">${esc(p.cat||'—')}</span></td>
+      <td>${esc(p.ranking||'—')}</td>
+      <td>${esc(p.genere||'—')}</td>
       <td style="text-align:right"><button class="btn btn-red btn-sm" onclick="removePart(${p.id})">✕</button></td></tr>`;
   });
   h+='</tbody></table>';
@@ -573,21 +602,63 @@ function renderParts(){
 }
 function importLista(){
   document.getElementById('import-txt').value.split('\n').map(l=>l.trim()).filter(Boolean).forEach(l=>{
-    const[nome,cat='']= l.split(';').map(x=>x.trim());
-    if(nome)S.parts.push({id:Date.now()+Math.random(),nome,cat});
+    const[nome,cat='',ranking='',genere='']= l.split(';').map(x=>x.trim());
+    if(nome)S.parts.push({id:Date.now()+Math.random(),nome,cat,ranking,genere});
   });
   save();renderParts();updateStats();closeModal('modal-import');
 }
 
 /* ── GIRONI CREAZIONE ──────────────────────────────── */
 function creaGironi(){
-  const n=S.numGironi=parseInt(document.getElementById('num-gironi').value)||2;
+  // S.numGironi è già sincronizzato con entrambi i campi "N° Gironi" (Partecipanti e Gironi) da updateStats()
+  const n=S.numGironi=parseInt(S.numGironi)||1;
   if(!S.parts.length){alert('Aggiungi prima i partecipanti!');return;}
+
+  // ranking assente/non numerico → in fondo (priorità minima)
+  const rankVal=p=>{const r=parseFloat(p.ranking);return isNaN(r)?-Infinity:r;};
+
+  // Dentro ogni categoria, alterna i generi (round-robin tra i sotto-gruppi M/F/non specificato)
+  // e ordina ciascun genere per ranking decrescente: stabilisce l'ordine in cui i giocatori
+  // vengono proposti all'assegnazione qui sotto (a parità di ogni altro criterio, chi ha ranking
+  // più alto viene piazzato per primo).
+  function ordinaGenereRanking(list){
+    const gruppi={};
+    list.forEach(p=>{const k=p.genere||'_';if(!gruppi[k])gruppi[k]=[];gruppi[k].push(p);});
+    Object.values(gruppi).forEach(g=>g.sort((a,b)=>rankVal(b)-rankVal(a)));
+    const chiavi=Object.keys(gruppi);
+    const out=[];
+    for(let i=0,rimasti=true;rimasti;i++){
+      rimasti=false;
+      chiavi.forEach(k=>{if(gruppi[k].length>i){out.push(gruppi[k][i]);rimasti=true;}});
+    }
+    return out;
+  }
+
   const dict={};
   S.parts.forEach(p=>{const k=p.cat||'_';if(!dict[k])dict[k]=[];dict[k].push(p);});
+  const ordered=[];
+  Object.values(dict).forEach(list=>ordinaGenereRanking(list).forEach(p=>ordered.push(p)));
+
+  // Assegnazione greedy: ogni giocatore va nel girone con meno giocatori (garantisce che nessun
+  // girone abbia più di un giocatore in più rispetto agli altri); a parità, preferisce il girone
+  // con meno giocatori della stessa categoria; a parità ulteriore, con meno giocatori dello stesso
+  // genere — così categoria e genere restano il più possibile "spalmati" tra i gironi.
   const gArr=Array.from({length:n},()=>[]);
-  let idx=0;
-  Object.values(dict).forEach(list=>list.forEach(p=>{gArr[idx%n].push(p);idx++;}));
+  const count=(arr,field,val)=>arr.filter(x=>(x[field]||'_')===val).length;
+  ordered.forEach(p=>{
+    let best=0;
+    for(let i=1;i<n;i++){
+      if(gArr[i].length<gArr[best].length){best=i;continue;}
+      if(gArr[i].length>gArr[best].length)continue;
+      const catI=count(gArr[i],'cat',p.cat||'_'), catB=count(gArr[best],'cat',p.cat||'_');
+      if(catI<catB){best=i;continue;}
+      if(catI>catB)continue;
+      const genI=count(gArr[i],'genere',p.genere||'_'), genB=count(gArr[best],'genere',p.genere||'_');
+      if(genI<genB)best=i;
+    }
+    gArr[best].push(p);
+  });
+
   S.gironi=gArr.map((ps,i)=>({nome:'Girone '+(i+1),parts:ps,incontri:genRR(ps)}));
   save();renderGironi();
 }
@@ -612,7 +683,7 @@ function genRR(players){
 /* ── CLASSIFICA ────────────────────────────────────── */
 function computeClass(g){
   const st={};
-  g.parts.forEach(p=>{st[p.id]={id:p.id,nome:p.nome,cat:String(p.cat||''),punti:0,sv:0,sp:0};});
+  g.parts.forEach(p=>{st[p.id]={id:p.id,nome:p.nome,cat:String(p.cat||''),ranking:String(p.ranking||''),punti:0,sv:0,sp:0};});
   g.incontri.forEach(inc=>{
     if(inc.s1===null)return;
     const[s1,s2]=[Number(inc.s1),Number(inc.s2)];
@@ -653,6 +724,10 @@ function computeClass(g){
     return{sv,sp,diff:sv-sp,wins};
   }
 
+  // Quoziente set vinti/persi. Nessun set perso ma almeno uno vinto → quoziente "infinito" (il migliore possibile).
+  // Nessun set giocato → 0 (nessun vantaggio né svantaggio).
+  function quoz(sv,sp){return sp>0?sv/sp:(sv>0?Infinity:0);}
+
   arr.sort((a,b)=>{
     // 1. Punti (decrescente)
     if(b.punti!==a.punti)return b.punti-a.punti;
@@ -661,29 +736,27 @@ function computeClass(g){
     const ha=h2hGroupStats(a,grp);
     const hb=h2hGroupStats(b,grp);
 
-    // 2. Differenza set negli scontri diretti tra pari punti (decrescente)
-    if(ha.diff!==hb.diff)return hb.diff-ha.diff;
+    // 2. Quoziente set (vinti/persi) negli scontri diretti tra pari punti (decrescente)
+    const qha=quoz(ha.sv,ha.sp), qhb=quoz(hb.sv,hb.sp);
+    if(qha!==qhb)return qhb-qha;
 
-    // 3. Set vinti negli scontri diretti tra pari diff (decrescente)
-    if(ha.sv!==hb.sv)return hb.sv-ha.sv;
+    // 3. Quoziente set (vinti/persi) assoluto, su tutti gli incontri (decrescente)
+    const qa=quoz(a.sv,a.sp), qb=quoz(b.sv,b.sp);
+    if(qa!==qb)return qb-qa;
 
-    // 4. Set persi negli scontri diretti tra pari sv (crescente = meno persi è meglio)
-    if(ha.sp!==hb.sp)return ha.sp-hb.sp;
-
-    // 5. Differenza set assoluta (decrescente)
-    if(b.diff!==a.diff)return b.diff-a.diff;
-
-    // 6. Set vinti assoluti (decrescente)
-    if(b.sv!==a.sv)return b.sv-a.sv;
-
-    // 7. Set persi assoluti (crescente)
-    if(a.sp!==b.sp)return a.sp-b.sp;
-
-    // 8. Categoria più alta numericamente → posizione più alta (ordine decrescente)
+    // 4. Categoria più alta numericamente → posizione più alta (ordine decrescente)
     // es. cat 6 va prima di cat 4 a parità di tutto
     const ca=parseFloat(a.cat), cb=parseFloat(b.cat);
     if(!isNaN(ca)&&!isNaN(cb)&&ca!==cb)return cb-ca; // cat numericamente più alta va prima
-    return String(b.cat).localeCompare(String(a.cat)); // fallback stringa decrescente
+    if(String(a.cat)!==String(b.cat))return String(b.cat).localeCompare(String(a.cat)); // fallback stringa decrescente
+
+    // 5. A parità di categoria: ranking, se presente per entrambi (sempre decrescente)
+    if(a.ranking&&b.ranking){
+      const ra=parseFloat(a.ranking), rb=parseFloat(b.ranking);
+      if(!isNaN(ra)&&!isNaN(rb)&&ra!==rb)return rb-ra; // ranking numericamente più alto va prima
+      if(String(a.ranking)!==String(b.ranking))return String(b.ranking).localeCompare(String(a.ranking));
+    }
+    return 0; // ex-aequo: nessun criterio discriminante
   });
 
   return arr;
@@ -866,18 +939,18 @@ function renderGironeContent(g,gi){
         return{sv,sp,diff:sv-sp,wins};
       }
       const stats=grp.map(r=>({...r,...h2hStat(r,grp)}));
+      // quoziente set vinti/persi (stesse regole di computeClass: nessun set perso ma almeno uno vinto → "∞")
+      const qFmt=(sv,sp)=>{const q=sp>0?sv/sp:(sv>0?Infinity:0);return q===Infinity?'∞':q.toFixed(2);};
       // trova il criterio discriminante
-      const diffs=stats.map(s=>s.diff), svs=stats.map(s=>s.sv), sps=stats.map(s=>s.sp);
-      const absDiff=grp.map(r=>r.diff), absSv=grp.map(r=>r.sv), absSp=grp.map(r=>r.sp);
-      const cats=grp.map(r=>parseFloat(r.cat||''));
+      const hQuoz=stats.map(s=>qFmt(s.sv,s.sp));
+      const absQuoz=grp.map(r=>qFmt(r.sv,r.sp));
+      const catsStr=grp.map(r=>String(r.cat||''));
+      const rankings=grp.map(r=>r.ranking||'');
       let criterion='';
-      if(new Set(diffs).size>1) criterion=`differenza set negli scontri diretti (${stats.map(s=>s.diff>0?'+'+s.diff:s.diff).join(' / ')})`;
-      else if(new Set(svs).size>1) criterion=`set vinti negli scontri diretti (${svs.join(' / ')})`;
-      else if(new Set(sps).size>1) criterion=`set persi negli scontri diretti (${sps.join(' / ')})`;
-      else if(new Set(absDiff).size>1) criterion=`differenza set assoluta (${absDiff.map(d=>d>0?'+'+d:d).join(' / ')})`;
-      else if(new Set(absSv).size>1) criterion=`set vinti assoluti (${absSv.join(' / ')})`;
-      else if(new Set(absSp).size>1) criterion=`set persi assoluti (${absSp.join(' / ')})`;
-      else if(cats.every(c=>!isNaN(c))&&new Set(cats).size>1) criterion=`categoria (cat più alta va prima: ${grp.map(r=>r.cat||'—').join(' / ')})`;
+      if(new Set(hQuoz).size>1) criterion=`quoziente set negli scontri diretti (${hQuoz.join(' / ')})`;
+      else if(new Set(absQuoz).size>1) criterion=`quoziente set assoluto (${absQuoz.join(' / ')})`;
+      else if(new Set(catsStr).size>1) criterion=`categoria (cat più alta va prima: ${grp.map(r=>r.cat||'—').join(' / ')})`;
+      else if(rankings.every(r=>r)&&new Set(rankings).size>1) criterion=`ranking (${rankings.join(' / ')})`;
       else criterion='nessun criterio discriminante (ex-aequo)';
       notes.push(`<span style="color:var(--text2)">Parità tra <strong style="color:var(--text)">${nomi}</strong> risolta per: <em>${criterion}</em></span>`);
     });
@@ -1052,53 +1125,69 @@ function renderQualAssign(){
   </div>`;
 }
 
-function getQual(board){
-  const seedMode=parseInt((document.getElementById('sel-seed')||{}).value)||2;
-  const classifiche=S.gironi.map(g=>computeClass(g));
-  // Build ordered list with girone/rank info, rispettando il seedMode
-  const orderedFull=[];
-  if(seedMode===2){
-    // Blocco 2: primi 2 di ogni girone, poi i successivi uno alla volta
-    let sp=0,step=2,maxP=Math.max(...classifiche.map(c=>c.length),0);
-    while(sp<maxP){
-      classifiche.forEach((cl,gi)=>{
-        for(let p=sp;p<Math.min(sp+step,cl.length);p++)
-          orderedFull.push({nome:cl[p].nome,id:cl[p].id,rank:p+1,gironeIdx:gi});
-      });
-      sp+=step;step=1;
-    }
-  } else {
-    // Ordine manuale: giocatore per giocatore, girone per girone
-    const maxP=Math.max(...classifiche.map(c=>c.length),0);
-    for(let p=0;p<maxP;p++)
-      classifiche.forEach((cl,gi)=>{if(p<cl.length)orderedFull.push({nome:cl[p].nome,id:cl[p].id,rank:p+1,gironeIdx:gi});});
-  }
-  // Solo chi è stato esplicitamente assegnato a questo tabellone (per id, non per nome:
-  // così due omonimi possono finire su tabelloni diversi senza confondersi)
-  return orderedFull.filter(r=>getQualEntry(r.id)===board);
-}
-
 function creaTabellone(){
   const board=document.getElementById('sel-board').value;
   const size=parseInt(document.getElementById('sel-size').value);
-  const qual=getQual(board);
-  if(!qual.length){alert('Nessun qualificato assegnato al Tabellone '+board+'. Usa il pannello sopra.');return;}
-  if(qual.length>size){
-    alert('⚠️ Tabellone '+board+': la dimensione scelta ('+size+') è inferiore al numero di qualificati ('+qual.length+'). Aumenta la dimensione o riduci i qualificati.');
+
+  // livelli[gironeIdx] = qualificati a questo tabellone di quel girone, in ordine di classifica
+  // (per id, non per nome: così due omonimi possono finire su tabelloni diversi senza confondersi)
+  const livelli=S.gironi.map((g,gi)=>computeClass(g)
+    .map((r,ri)=>({nome:r.nome,id:r.id,rank:ri+1,gironeIdx:gi}))
+    .filter(q=>getQualEntry(q.id)===board));
+  const totQual=livelli.reduce((n,l)=>n+l.length,0);
+
+  if(!totQual){alert('Nessun qualificato assegnato al Tabellone '+board+'. Usa il pannello sopra.');return;}
+  if(totQual>size){
+    alert('⚠️ Tabellone '+board+': la dimensione scelta ('+size+') è inferiore al numero di qualificati ('+totQual+'). Aumenta la dimensione o riduci i qualificati.');
     return;
   }
+
+  // Seeding "stile tennistico": i primi di ogni girone sono le prime teste di serie; i secondi
+  // vanno, quando possibile, nella metà opposta del tabellone rispetto al primo dello stesso
+  // girone; dal terzo in poi si evita solo di incontrare al 1° turno un compagno già piazzato.
   const pos=SEED_MAP[size]||SEED_MAP[64];
+  const meta=slot=>slot<=size/2?'top':'bottom';
+  const avversarioT1=slot=>slot%2===1?slot+1:slot-1;
+
+  const remaining=[];
+  for(let i=1;i<pos.length;i++)if(pos[i]<=size)remaining.push(pos[i]);
+
+  const slotDi={}; // id partecipante -> slot assegnato
   const slots=Array(size+1).fill(null);
   const seedLabels={}; // nome -> label es. "1°G1"
-  qual.forEach((q,i)=>{
-    const si=i+1;
-    if(si<pos.length&&pos[si]<=size){
-      slots[pos[si]]=q.nome;
-      const rankLabel=q.rank?q.rank+'°':'?';
-      const gironeLabel=q.gironeIdx!==undefined?('G'+(q.gironeIdx+1)):'';
-      seedLabels[q.nome]=rankLabel+gironeLabel;
-    }
+
+  function assegna(q,vaBene){
+    let idx=remaining.findIndex(vaBene);
+    if(idx===-1)idx=0; // fallback best-effort: nessuno slot libero soddisfa il vincolo
+    const slot=remaining.splice(idx,1)[0];
+    slots[slot]=q.nome;
+    slotDi[q.id]=slot;
+    seedLabels[q.nome]=q.rank+'°G'+(q.gironeIdx+1);
+  }
+
+  // Livello 1: primi classificati, nessun vincolo (massima distanza reciproca via SEED_MAP)
+  livelli.forEach(l=>{if(l[0])assegna(l[0],()=>true);});
+
+  // Livello 2: secondi classificati, metà opposta rispetto al primo dello stesso girone (se presente in questo tabellone)
+  livelli.forEach(l=>{
+    const q=l[1];if(!q)return;
+    const slotPrimo=l[0]&&slotDi[l[0].id];
+    if(slotPrimo!==undefined&&slotPrimo!==null){
+      const metaOpposta=meta(slotPrimo)==='top'?'bottom':'top';
+      assegna(q,s=>meta(s)===metaOpposta);
+    } else assegna(q,()=>true);
   });
+
+  // Livelli 3+: evita lo slot "gemello" del 1° turno di ogni compagno di girone già piazzato
+  const maxLivelli=Math.max(0,...livelli.map(l=>l.length));
+  for(let liv=2;liv<maxLivelli;liv++){
+    livelli.forEach(l=>{
+      const q=l[liv];if(!q)return;
+      const proibiti=new Set(l.slice(0,liv).filter(c=>slotDi[c.id]!==undefined).map(c=>avversarioT1(slotDi[c.id])));
+      assegna(q,s=>!proibiti.has(s));
+    });
+  }
+
   for(let i=1;i<=size;i++)if(!slots[i])slots[i]='X';
   const rounds=[];let cur=slots.slice(1);const nr=Math.log2(size);
   for(let r=0;r<nr;r++){
@@ -1443,9 +1532,8 @@ function importTorneo(evt){
       if(!S.qualAssign)S.qualAssign={};
       if(!S.numGironi)S.numGironi=2;
       save();
-      // ri-renderizza tutto
+      // ri-renderizza tutto (updateStats() sincronizza già i campi "N° Gironi" da S.numGironi)
       renderParts(); updateStats();
-      document.getElementById('num-gironi').value=S.numGironi||2;
       renderGironi();
       renderTab();
       renderQualAssign();
@@ -1465,7 +1553,6 @@ function resetTorneo(){
   S={parts:[],numGironi:2,gironi:[],tabelloni:{A:null,B:null},qualAssign:{}};
   save();
   renderParts(); updateStats();
-  document.getElementById('num-gironi').value=2;
   document.getElementById('gironi-container').innerHTML='<div class="empty">Clicca "Crea Gironi" per generare gli accoppiamenti.</div>';
   document.getElementById('tab-container').innerHTML='<div class="empty">Assegna i qualificati sopra, poi genera il tabellone.</div>';
   document.getElementById('qual-assign-container').innerHTML='<div class="empty">Crea prima i gironi per assegnare i qualificati.</div>';
@@ -1473,8 +1560,8 @@ function resetTorneo(){
 }
 
 /* ── INIT ──────────────────────────────────────────── */
+if(!S.numGironi)S.numGironi=2;
 renderParts();updateStats();
-document.getElementById('num-gironi').value=S.numGironi||2;
 renderAnag();
 
 /* ── ANAGRAFICA ────────────────────────────────────── */
@@ -1482,19 +1569,23 @@ function addAnag(){
   const nome=document.getElementById('anag-nome').value.trim();
   if(!nome)return;
   const cat=document.getElementById('anag-cat').value.trim()||'';
-  ANAG.push({id:Date.now()+Math.random(),nome,cat});
+  const ranking=document.getElementById('anag-ranking').value.trim()||'';
+  const genere=document.getElementById('anag-genere').value||'';
+  ANAG.push({id:Date.now()+Math.random(),nome,cat,ranking,genere});
   document.getElementById('anag-nome').value='';
   document.getElementById('anag-cat').value='';
+  document.getElementById('anag-ranking').value='';
+  document.getElementById('anag-genere').value='';
   saveAnag();renderAnag();
   document.getElementById('anag-nome').focus();
 }
 function removeAnag(id){ANAG=ANAG.filter(p=>p.id!==id);saveAnag();renderAnag();}
 function editAnag(id,field,val){const p=ANAG.find(x=>x.id===id);if(p){p[field]=val;saveAnag();}}
 function sortAnag(field){
-  if(field==='cat'){
-    // Ordina per categoria, poi per nome a parità
+  if(field==='cat'||field==='ranking'){
+    // Ordina per categoria/ranking, poi per nome a parità
     ANAG.sort((a,b)=>{
-      const c=String(a.cat||'').localeCompare(String(b.cat||''),undefined,{numeric:true});
+      const c=String(a[field]||'').localeCompare(String(b[field]||''),undefined,{numeric:true});
       return c!==0?c:a.nome.localeCompare(b.nome);
     });
   } else {
@@ -1505,9 +1596,9 @@ function sortAnag(field){
 function clearAnag(){if(!confirm("Svuotare tutta l'anagrafica?"))return;ANAG=[];saveAnag();renderAnag();}
 function importAnag(){
   document.getElementById('anag-import-txt').value.split('\n').map(l=>l.trim()).filter(Boolean).forEach(l=>{
-    const[nome,cat='']= l.split(';').map(x=>x.trim());
+    const[nome,cat='',ranking='',genere='']= l.split(';').map(x=>x.trim());
     if(nome&&!ANAG.find(p=>p.nome.toLowerCase()===nome.toLowerCase()))
-      ANAG.push({id:Date.now()+Math.random(),nome,cat});
+      ANAG.push({id:Date.now()+Math.random(),nome,cat,ranking,genere});
   });
   saveAnag();renderAnag();closeModal('modal-anag-import');
 }
@@ -1515,15 +1606,21 @@ function renderAnag(){
   const w=document.getElementById('anag-wrap');
   if(!w)return;
   if(!ANAG.length){w.innerHTML='<div class="empty">Nessun giocatore in anagrafica.</div>';return;}
-  let h='<table><thead><tr><th>#</th><th>Nome</th><th>Cat</th><th></th></tr></thead><tbody>';
+  let h='<table><thead><tr><th>#</th><th>Nome</th><th>Cat</th><th>Ranking</th><th>Genere</th><th></th></tr></thead><tbody>';
   ANAG.forEach((p,i)=>{
     const inlineStyle='background:transparent;border:none;border-bottom:1px solid var(--border);border-radius:0;padding:2px 4px;color:var(--text)';
+    const genOpt=g=>`<option value="${g}" ${p.genere===g?'selected':''}>${g||'—'}</option>`;
     h+=`<tr>
       <td style="color:var(--text2);width:28px">${i+1}</td>
       <td><input value="${esc(p.nome)}" style="${inlineStyle};width:100%"
         onchange="editAnag(${p.id},'nome',this.value)"></td>
       <td><input value="${esc(p.cat||'')}" placeholder="—" style="${inlineStyle};width:60px"
         onchange="editAnag(${p.id},'cat',this.value)"></td>
+      <td><input value="${esc(p.ranking||'')}" placeholder="—" style="${inlineStyle};width:70px"
+        onchange="editAnag(${p.id},'ranking',this.value)"></td>
+      <td><select style="${inlineStyle};width:56px" onchange="editAnag(${p.id},'genere',this.value)">
+        ${genOpt('')}${genOpt('M')}${genOpt('F')}
+      </select></td>
       <td style="text-align:right"><button class="btn btn-red btn-sm" onclick="removeAnag(${p.id})">✕</button></td>
     </tr>`;
   });
@@ -1541,8 +1638,8 @@ function exportAnagJson(){
 
 function exportAnagCsv(){
   if(!ANAG.length){alert('Anagrafica vuota.');return;}
-  const header='Nome;Categoria';
-  const rows=ANAG.map(p=>`${p.nome.replace(/;/g,',')};${(p.cat||'').replace(/;/g,',')}`);
+  const header='Nome;Categoria;Ranking;Genere';
+  const rows=ANAG.map(p=>`${p.nome.replace(/;/g,',')};${(p.cat||'').replace(/;/g,',')};${(p.ranking||'').replace(/;/g,',')};${(p.genere||'').replace(/;/g,',')}`);
   const csv=[header,...rows].join('\n');
   const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a');
@@ -1565,21 +1662,23 @@ function importAnagFile(evt){
         data.forEach(p=>{
           const nome=String(p.nome||'').trim();
           const cat=String(p.cat||'').trim();
+          const ranking=String(p.ranking||'').trim();
+          const genere=String(p.genere||'').trim();
           if(!nome)return;
           total++;
           if(!ANAG.find(x=>x.nome.toLowerCase()===nome.toLowerCase())){
-            ANAG.push({id:Date.now()+Math.random(),nome,cat});added++;
+            ANAG.push({id:Date.now()+Math.random(),nome,cat,ranking,genere});added++;
           }
         });
       } else {
         // CSV
         content.replace(/^\ufeff/,'').split('\n').forEach((line,i)=>{
           if(i===0&&line.toLowerCase().startsWith('nome'))return; // salta header
-          const[nome,cat='']= line.split(';').map(x=>x.trim());
+          const[nome,cat='',ranking='',genere='']= line.split(';').map(x=>x.trim());
           if(!nome)return;
           total++;
           if(!ANAG.find(x=>x.nome.toLowerCase()===nome.toLowerCase())){
-            ANAG.push({id:Date.now()+Math.random(),nome,cat});added++;
+            ANAG.push({id:Date.now()+Math.random(),nome,cat,ranking,genere});added++;
           }
         });
       }
@@ -1603,9 +1702,12 @@ function renderAnagPicker(){
     const already=alreadyNomi.has(p.nome.toLowerCase());
     return`<label class="anag-item${already?' already':''}">
       <input type="checkbox" data-anid="${p.id}" data-nome="${esc(p.nome)}" data-cat="${esc(p.cat||'')}"
+        data-ranking="${esc(p.ranking||'')}" data-genere="${esc(p.genere||'')}"
         ${already?'disabled checked':''} onchange="updatePickCount()">
       <span class="an-nome">${esc(p.nome)}</span>
       ${p.cat?`<span class="an-cat">${esc(p.cat)}</span>`:''}
+      ${p.ranking?`<span class="an-cat">${esc(p.ranking)}</span>`:''}
+      ${p.genere?`<span class="an-cat">${esc(p.genere)}</span>`:''}
     </label>`;
   }).join('');
   updatePickCount();
@@ -1620,7 +1722,7 @@ function anagPickNone(){document.querySelectorAll('#anag-picker-list input[type=
 function addFromAnag(){
   const checked=document.querySelectorAll('#anag-picker-list input[type=checkbox]:checked:not(:disabled)');
   if(!checked.length){alert('Seleziona almeno un giocatore.');return;}
-  checked.forEach(cb=>{S.parts.push({id:Date.now()+Math.random(),nome:cb.dataset.nome,cat:cb.dataset.cat});});
+  checked.forEach(cb=>{S.parts.push({id:Date.now()+Math.random(),nome:cb.dataset.nome,cat:cb.dataset.cat,ranking:cb.dataset.ranking||'',genere:cb.dataset.genere||''});});
   save();renderParts();updateStats();
   closeModal('modal-anagrafica-pick');
 }

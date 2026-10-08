@@ -280,6 +280,7 @@ tr:hover td{background:var(--bg3)}
     <button class="nav-tab active" data-sec="partecipanti">👥 Partecipanti Torneo</button>
     <button class="nav-tab" data-sec="gironi">🏅 Gironi</button>
     <button class="nav-tab" data-sec="tabellone">🏆 Tabellone</button>
+    <button class="nav-tab" data-sec="classifica">📈 Classifica</button>
   </nav>
   <div style="display:flex;gap:6px;margin-left:12px;border-left:1px solid #333;padding-left:12px">
     <button class="btn btn-ghost btn-sm" onclick="exportTorneo()" title="Esporta stato torneo">💾 Salva</button>
@@ -426,8 +427,24 @@ tr:hover td{background:var(--bg3)}
       <button class="btn btn-gold" onclick="creaTabellone()">🏆 Genera Tabellone</button>
       <button class="btn btn-red btn-sm" onclick="resetTab()">Reset</button>
       <button class="btn btn-green" onclick="pdfTabellone()">🖨 PDF Tabelloni</button>
+      <button class="btn btn-blue" onclick="assegnaPuntiClassifica()">📈 Assegna Punti</button>
     </div>
     <div id="tab-container"><div class="empty">Assegna i qualificati sopra, poi genera il tabellone.</div></div>
+  </div>
+</section>
+
+<!-- CLASSIFICA -->
+<section id="sec-classifica" class="section">
+  <div class="card">
+    <div class="card-title">
+      Classifica Generale
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-green btn-sm" onclick="exportClassificaJson()">💾 Esporta JSON</button>
+        <button class="btn btn-blue btn-sm" onclick="exportClassificaCsv()">📊 Esporta CSV</button>
+        <button class="btn btn-red btn-sm" onclick="clearClassifica()">🗑 Svuota</button>
+      </div>
+    </div>
+    <div id="classifica-wrap"><div class="empty">Nessun punteggio assegnato ancora.</div></div>
   </div>
 </section>
 
@@ -513,6 +530,7 @@ document.querySelectorAll('.nav-tab').forEach(btn=>{
     if(sec==='gironi')renderGironi();
     if(sec==='tabellone'){renderTab();renderQualAssign();}
     if(sec==='partecipanti'){renderParts();updateStats();}
+    if(sec==='classifica')renderClassifica();
   });
 });
 function navTo(sec){document.querySelector(`[data-sec="${sec}"]`).click();}
@@ -1202,7 +1220,15 @@ function resetTab(){
   if(!confirm('Resettare Tabellone '+board+'?'))return;
   S.tabelloni[board]=null;save();renderTab();
 }
-const rlabel=(i,tot)=>{const f=tot-1-i;return f===0?'Finale':f===1?'Semifinali':f===2?'Quarti':'Round '+(i+1);};
+const rlabel=(i,tot)=>{
+  const f=tot-1-i;
+  if(f===0)return 'Finale';
+  if(f===1)return 'Semifinali';
+  if(f===2)return 'Quarti';
+  if(f===3)return 'Ottavi';
+  if(f===4)return 'Sedicesimi';
+  return 'Round '+(i+1);
+};
 
 function buildBracket(tab,board,interactive){
   const nr=tab.rounds.length;
@@ -1559,10 +1585,140 @@ function resetTorneo(){
   document.querySelector('[data-sec="partecipanti"]').click();
 }
 
+/* ── CLASSIFICA GENERALE ───────────────────────────── */
+// Storage separato (come l'Anagrafica): cumulativa su più tornei, non si resetta col torneo.
+let CLASS=[]; // [{id,nome,cat,punti,storico:[{data,torneo,punti}]}]
+try{const r=localStorage.getItem('tts_classifica');if(r)CLASS=JSON.parse(r);}catch(e){}
+const saveClassifica=()=>{try{localStorage.setItem('tts_classifica',JSON.stringify(CLASS));}catch(e){}};
+// Punti dell'ultima assegnazione fatta in questa sessione, SOLO in memoria (non in localStorage):
+// serve a mostrare "punti di questo torneo" accanto al totale; sparisce se si ricarica la pagina.
+let _ultimaAssegnazione=null; // {label, deltas:{nomeLower:{nome,punti}}}
+
+const PUNTI_TABELLONE={
+  A:{Vincitore:24,Finalista:22,Semifinalista:20,Quarti:16,Ottavi:12,Sedicesimi:5},
+  B:{Vincitore:20,Finalista:18,Semifinalista:16,Quarti:14,Ottavi:10,Sedicesimi:3},
+};
+// Mappa l'etichetta del round (quella di rlabel) al nome del "piazzamento" di chi lo perde.
+// Chi vince l'ultimo round è il Vincitore; chi lo perde è il Finalista (non "lo sconfitto in Finale").
+const TIER_LOSER={Finale:'Finalista',Semifinali:'Semifinalista',Quarti:'Quarti',Ottavi:'Ottavi',Sedicesimi:'Sedicesimi'};
+
+function tabCompleto(tab){
+  if(!tab)return null; // non generato
+  const fin=tab.rounds[tab.rounds.length-1][0];
+  return!!(fin&&fin.win&&fin.win!=='X'&&fin.win!=='?');
+}
+// Per ogni giocatore del tabellone, il piazzamento raggiunto (solo per i round con un punteggio definito).
+function risultatiTabellone(tab){
+  const nr=tab.rounds.length,out={};
+  const fin=tab.rounds[nr-1][0];
+  if(fin&&fin.win&&fin.win!=='X'&&fin.win!=='?')out[fin.win]='Vincitore';
+  tab.rounds.forEach((matches,ri)=>{
+    const tier=TIER_LOSER[rlabel(ri,nr)];
+    if(!tier)return; // round troppo presto (es. "Round 1" di un tabellone da 64): nessun punteggio previsto
+    matches.forEach(m=>{
+      if(!m.win||m.win==='X'||m.win==='?')return;
+      const loser=m.win===m.p1?m.p2:m.p1;
+      if(loser&&loser!=='X'&&loser!=='?'&&!(loser in out))out[loser]=tier;
+    });
+  });
+  return out;
+}
+function assegnaPuntiClassifica(){
+  const boards=['A','B'].filter(b=>S.tabelloni[b]);
+  if(!boards.length){alert('Nessun tabellone generato.');return;}
+  const incompleti=boards.filter(b=>!tabCompleto(S.tabelloni[b]));
+  if(incompleti.length){
+    alert('⚠️ Il torneo non è ancora concluso: manca il vincitore della finale per Tabellone '+incompleti.join(' e ')+'.\nCompleta tutti i risultati prima di assegnare i punti.');
+    return;
+  }
+  const giaFatti=boards.filter(b=>S.tabelloni[b].puntiAssegnati);
+  if(giaFatti.length){
+    const info=giaFatti.map(b=>{const pa=S.tabelloni[b].puntiAssegnati;return`Tabellone ${b} (${pa.torneo}, ${pa.data})`;}).join(', ');
+    if(!confirm('Punti già assegnati in precedenza per: '+info+'.\nAssegnare di nuovo aggiungerebbe punti duplicati alla Classifica. Procedere comunque?'))return;
+  }
+  const label=prompt('Nome del torneo (per lo storico in Classifica):',new Date().toLocaleDateString('it-IT'));
+  if(label===null)return; // annullato
+
+  const catByNome={};S.parts.forEach(p=>{catByNome[p.nome]=p.cat;});
+  const deltas={}; // nomeLower -> {nome,punti}
+  boards.forEach(b=>{
+    const ris=risultatiTabellone(S.tabelloni[b]);
+    const scale=PUNTI_TABELLONE[b];
+    Object.entries(ris).forEach(([nome,tier])=>{
+      const pts=scale[tier]||0;
+      const k=nome.toLowerCase();
+      if(!deltas[k])deltas[k]={nome,punti:0};
+      deltas[k].punti+=pts;
+    });
+  });
+  if(!Object.keys(deltas).length){alert('Nessun giocatore con un piazzamento valido da premiare.');return;}
+
+  const data=new Date().toLocaleDateString('it-IT');
+  Object.values(deltas).forEach(d=>{
+    let row=CLASS.find(r=>r.nome.toLowerCase()===d.nome.toLowerCase());
+    if(!row){row={id:Date.now()+Math.random(),nome:d.nome,cat:catByNome[d.nome]||'',punti:0,storico:[]};CLASS.push(row);}
+    else row.cat=catByNome[d.nome]||row.cat;
+    row.punti+=d.punti;
+    row.storico.push({data,torneo:label,punti:d.punti});
+  });
+  boards.forEach(b=>{S.tabelloni[b].puntiAssegnati={torneo:label,data};});
+  save();saveClassifica();
+  _ultimaAssegnazione={label,deltas};
+  renderClassifica();
+  alert('✅ Punti assegnati e aggiunti alla Classifica generale.');
+}
+function removeClassifica(id){CLASS=CLASS.filter(r=>r.id!==id);saveClassifica();renderClassifica();}
+function clearClassifica(){
+  if(!confirm('Svuotare tutta la Classifica generale?'))return;
+  CLASS=[];_ultimaAssegnazione=null;saveClassifica();renderClassifica();
+}
+function renderClassifica(){
+  const w=document.getElementById('classifica-wrap');
+  if(!w)return;
+  if(!CLASS.length){w.innerHTML='<div class="empty">Nessun punteggio assegnato ancora.</div>';return;}
+  const sorted=[...CLASS].sort((a,b)=>b.punti-a.punti);
+  const showSession=!!_ultimaAssegnazione;
+  let h='<table><thead><tr><th></th><th>Nome</th><th>Cat</th>';
+  if(showSession)h+=`<th>${esc(_ultimaAssegnazione.label)}</th>`;
+  h+='<th>Punti Totali</th><th>Tornei</th><th></th></tr></thead><tbody>';
+  sorted.forEach((r,i)=>{
+    const pc=i===0?'pos-1':i===1?'pos-2':i===2?'pos-3':'pos-x';
+    h+=`<tr><td><span class="pos-badge ${pc}">${i+1}</span></td><td>${esc(r.nome)}</td><td><span class="badge badge-cat">${esc(r.cat||'—')}</span></td>`;
+    if(showSession){
+      const d=_ultimaAssegnazione.deltas[r.nome.toLowerCase()];
+      h+=`<td style="color:var(--green);font-weight:700">${d?'+'+d.punti:'—'}</td>`;
+    }
+    h+=`<td style="font-weight:700;color:var(--gold)">${r.punti}</td><td>${r.storico.length}</td>`;
+    h+=`<td style="text-align:right"><button class="btn btn-red btn-sm" onclick="removeClassifica(${r.id})">✕</button></td></tr>`;
+  });
+  h+='</tbody></table>';
+  w.innerHTML=h;
+}
+function exportClassificaJson(){
+  if(!CLASS.length){alert('Classifica vuota.');return;}
+  const blob=new Blob([JSON.stringify(CLASS,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='Classifica_TTS.json';
+  a.click();URL.revokeObjectURL(a.href);
+}
+function exportClassificaCsv(){
+  if(!CLASS.length){alert('Classifica vuota.');return;}
+  const header='Nome;Categoria;PuntiTotali;TorneiDisputati';
+  const rows=[...CLASS].sort((a,b)=>b.punti-a.punti).map(r=>`${r.nome.replace(/;/g,',')};${(r.cat||'').replace(/;/g,',')};${r.punti};${r.storico.length}`);
+  const csv=[header,...rows].join('\n');
+  const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='Classifica_TTS.csv';
+  a.click();URL.revokeObjectURL(a.href);
+}
+
 /* ── INIT ──────────────────────────────────────────── */
 if(!S.numGironi)S.numGironi=2;
 renderParts();updateStats();
 renderAnag();
+renderClassifica();
 
 /* ── ANAGRAFICA ────────────────────────────────────── */
 function addAnag(){

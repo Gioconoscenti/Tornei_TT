@@ -439,6 +439,9 @@ tr:hover td{background:var(--bg3)}
     <div class="card-title">
       Classifica Generale
       <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <label class="btn btn-ghost btn-sm" style="cursor:pointer;margin:0" title="Importa classifica da JSON">
+          📂 Importa JSON<input type="file" accept=".json" onchange="importClassificaJson(event)" style="display:none">
+        </label>
         <button class="btn btn-green btn-sm" onclick="exportClassificaJson()">💾 Esporta JSON</button>
         <button class="btn btn-blue btn-sm" onclick="exportClassificaCsv()">📊 Esporta CSV</button>
         <button class="btn btn-red btn-sm" onclick="clearClassifica()">🗑 Svuota</button>
@@ -1701,6 +1704,32 @@ function exportClassificaJson(){
   a.href=URL.createObjectURL(blob);
   a.download='Classifica_TTS.json';
   a.click();URL.revokeObjectURL(a.href);
+}
+function importClassificaJson(evt){
+  const file=evt.target.files[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const data=JSON.parse(e.target.result);
+      if(!Array.isArray(data))throw new Error('Il file JSON deve contenere un array');
+      if(!confirm('Sovrascrivere la Classifica generale corrente con "'+file.name+'"?'))return;
+      CLASS=data.map(r=>({
+        id:r.id||Date.now()+Math.random(),
+        nome:String(r.nome||'').trim(),
+        cat:r.cat||'',
+        punti:Number(r.punti)||0,
+        storico:Array.isArray(r.storico)?r.storico:[],
+      })).filter(r=>r.nome);
+      _ultimaAssegnazione=null;
+      saveClassifica();renderClassifica();
+      alert('✅ Classifica "'+file.name+'" caricata con successo!');
+    }catch(err){
+      alert('❌ Errore nel caricamento: '+err.message);
+    }
+  };
+  reader.readAsText(file);
+  evt.target.value=''; // reset input per permettere di ricaricare lo stesso file
 }
 function exportClassificaCsv(){
   if(!CLASS.length){alert('Classifica vuota.');return;}

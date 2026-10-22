@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Torneo Manager is a single-file web app for ASD Tennistavolo San Polo (Parma) to run table-tennis tournaments: round-robin groups ("gironi") followed by a single-elimination bracket ("tabellone"). It's built to run entirely client-side with zero install: open `Tornei_TT.html` in a browser, no server, no account, no build step. All state lives in the browser's `localStorage`.
 
-The full user-facing workflow and business rules are documented in `Manuale_TorneoManager.pdf` (Italian) — read it (`pdftotext -layout Manuale_TorneoManager.pdf -` works in this environment) before changing tie-break logic, bracket seeding, or the import/export formats, since those are user-visible contracts described there. It currently predates the Nome/Cognome split (screenshots and the "Nome;Categoria;Ranking;Genere" import format it shows are one field short) — regenerate it (see below) next time it's otherwise due for an update, no need to do it just for this.
+The full user-facing workflow and business rules are documented in `Manuale_TorneoManager.pdf` (Italian) — read it (`pdftotext -layout Manuale_TorneoManager.pdf -` works in this environment) before changing tie-break logic, bracket seeding, or the import/export formats, since those are user-visible contracts described there.
 
 ## Repository layout
 

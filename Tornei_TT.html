@@ -361,6 +361,7 @@ tr:hover td{background:var(--bg3)}
       <button class="btn btn-gold" onclick="addPart()">+ Aggiungi</button>
       <button class="btn btn-ghost" onclick="openModal('modal-import')">📋 Importa testo</button>
       <button class="btn btn-blue" onclick="openModal('modal-anagrafica-pick')">📋 Da anagrafica</button>
+      <button class="btn btn-ghost" onclick="openModal('modal-sondaggio-import')">📲 Da sondaggio</button>
     </div>
   </div>
 
@@ -500,6 +501,25 @@ tr:hover td{background:var(--bg3)}
   </div>
 </div>
 
+<!-- MODAL Import da sondaggio (fuzzy match con Anagrafica) -->
+<div class="overlay" id="modal-sondaggio-import">
+  <div class="modal" style="max-width:720px">
+    <h3>📲 Importa da sondaggio</h3>
+    <div class="fg">
+      <label>Incolla qui i nomi del sondaggio (uno per riga) — anche nomi parziali o in ordine diverso vanno bene</label>
+      <textarea id="sondaggio-txt" rows="7" placeholder="Mario Rossi&#10;Lucia B.&#10;Gianni Verdi"></textarea>
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-bottom:4px">
+      <button class="btn btn-gold btn-sm" onclick="analizzaSondaggio()">🔍 Trova corrispondenze</button>
+    </div>
+    <div id="sondaggio-review"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+      <button class="btn btn-ghost" onclick="closeModal('modal-sondaggio-import')">Annulla</button>
+      <button class="btn btn-gold" onclick="confermaSondaggio()">➕ Aggiungi selezionati al torneo</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL Import -->
 <div class="overlay" id="modal-import">
   <div class="modal">
@@ -549,6 +569,11 @@ const openModal=id=>{
   if(id==='modal-anagrafica-pick'){
     document.getElementById('anag-filter').value='';
     renderAnagPicker();
+  }
+  if(id==='modal-sondaggio-import'){
+    _sondaggioRows=[];
+    document.getElementById('sondaggio-txt').value='';
+    document.getElementById('sondaggio-review').innerHTML='';
   }
 };
 const closeModal=id=>document.getElementById(id).classList.remove('open');
@@ -1975,6 +2000,122 @@ function addFromAnag(){
   checked.forEach(cb=>{S.parts.push({id:Date.now()+Math.random(),nome:cb.dataset.nome,cognome:cb.dataset.cognome||'',cat:cb.dataset.cat,ranking:cb.dataset.ranking||'',genere:cb.dataset.genere||''});});
   save();renderParts();updateStats();
   closeModal('modal-anagrafica-pick');
+}
+
+/* ── IMPORT DA SONDAGGIO (abbinamento fuzzy con l'Anagrafica) ───────
+   I sondaggi WhatsApp spesso riportano solo il nome, in ordine diverso o abbreviato:
+   per ogni riga incollata si propone la persona più simile già in Anagrafica
+   (da confermare o correggere), invece di un import "cieco". */
+function normStr(s){
+  return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
+}
+function levenshtein(a,b){
+  const m=a.length,n=b.length;
+  if(!m)return n; if(!n)return m;
+  let prev=Array.from({length:n+1},(_,j)=>j);
+  for(let i=1;i<=m;i++){
+    const cur=[i];
+    for(let j=1;j<=n;j++)cur[j]=a[i-1]===b[j-1]?prev[j-1]:1+Math.min(prev[j-1],prev[j],cur[j-1]);
+    prev=cur;
+  }
+  return prev[n];
+}
+function similarity(a,b){
+  a=normStr(a);b=normStr(b);
+  if(!a||!b)return 0;
+  return 1-levenshtein(a,b)/Math.max(a.length,b.length);
+}
+// Punteggio migliore tra: nome completo, cognome+nome invertito, solo nome, solo cognome —
+// copre i casi tipici di un sondaggio (ordine diverso, solo il nome di battesimo, ecc.)
+function matchScore(raw,p){
+  return Math.max(
+    similarity(raw,fullName(p)),
+    similarity(raw,`${p.cognome||''} ${p.nome||''}`.trim()),
+    similarity(raw,p.nome||''),
+    similarity(raw,p.cognome||'')
+  );
+}
+const SONDAGGIO_SOGLIA=0.45; // sotto questa soglia non si propone nessun abbinamento automatico
+function sondaggioAlready(matchId){
+  if(!matchId)return false;
+  const p=ANAG.find(a=>String(a.id)===String(matchId));
+  if(!p)return false;
+  const already=new Set(S.parts.map(x=>fullName(x).toLowerCase()));
+  return already.has(fullName(p).toLowerCase());
+}
+
+let _sondaggioRows=[]; // [{raw, matchId, score, checked}]
+function analizzaSondaggio(){
+  const righe=document.getElementById('sondaggio-txt').value.split('\n').map(l=>l.trim()).filter(Boolean);
+  if(!righe.length){alert('Incolla prima i nomi del sondaggio, uno per riga.');return;}
+  _sondaggioRows=righe.map(raw=>{
+    let best=null,bestScore=0;
+    ANAG.forEach(p=>{const s=matchScore(raw,p);if(s>bestScore){bestScore=s;best=p;}});
+    const matchId=best&&bestScore>=SONDAGGIO_SOGLIA?best.id:'';
+    return{raw,matchId,score:best?bestScore:0,checked:!sondaggioAlready(matchId)};
+  });
+  renderSondaggioReview();
+}
+function onSondaggioMatchChange(i,val){
+  _sondaggioRows[i].matchId=val;
+  _sondaggioRows[i].checked=!sondaggioAlready(val);
+  renderSondaggioReview();
+}
+function onSondaggioCheckChange(i,checked){_sondaggioRows[i].checked=checked;}
+function renderSondaggioReview(){
+  const c=document.getElementById('sondaggio-review');
+  if(!c)return;
+  if(!_sondaggioRows.length){c.innerHTML='';return;}
+  const righeHtml=_sondaggioRows.map((row,i)=>{
+    const ranked=ANAG.map(a=>({a,s:matchScore(row.raw,a)})).sort((x,y)=>y.s-x.s);
+    const opts=ranked.map(({a,s})=>
+      `<option value="${a.id}" ${String(row.matchId)===String(a.id)?'selected':''}>${esc(fullName(a))} (${Math.round(s*100)}%)</option>`
+    ).join('');
+    const already=sondaggioAlready(row.matchId);
+    return`<div class="anag-item" style="gap:10px">
+      <input type="checkbox" ${row.checked?'checked':''} onchange="onSondaggioCheckChange(${i},this.checked)">
+      <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(row.raw)}">${esc(row.raw)}</span>
+      <span style="color:var(--text2);flex-shrink:0">→</span>
+      <select style="flex:1;min-width:0" onchange="onSondaggioMatchChange(${i},this.value)">
+        <option value="">— Nuovo partecipante —</option>
+        ${opts}
+      </select>
+      ${already?'<span style="font-size:.68rem;color:var(--green);flex-shrink:0;white-space:nowrap">già nel torneo</span>':''}
+    </div>`;
+  }).join('');
+  c.innerHTML=`<div style="max-height:340px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;margin:10px 0">${righeHtml}</div>
+    <div style="font-size:.78rem;color:var(--text2)">${_sondaggioRows.length} righe analizzate — rivedi gli abbinamenti proposti (ordinati per somiglianza), poi conferma.</div>`;
+}
+function confermaSondaggio(){
+  if(!_sondaggioRows.length){alert('Incolla prima i nomi e premi "Trova corrispondenze".');return;}
+  let added=0;
+  _sondaggioRows.forEach(row=>{
+    if(!row.checked)return;
+    if(row.matchId){
+      const p=ANAG.find(a=>String(a.id)===String(row.matchId));
+      if(p){
+        S.parts.push({id:Date.now()+Math.random(),nome:p.nome,cognome:p.cognome||'',cat:p.cat||'',ranking:p.ranking||'',genere:p.genere||''});
+        added++;
+      }
+    } else {
+      // Nessuna corrispondenza: crea un nuovo partecipante, aggiunto anche in Anagrafica
+      // (se dopo la stessa persona compare in un prossimo sondaggio verrà riconosciuta)
+      const entry={nome:row.raw};
+      migraNomeCognome(entry);
+      if(fullName(entry)){
+        S.parts.push({id:Date.now()+Math.random(),nome:entry.nome,cognome:entry.cognome,cat:'',ranking:'',genere:''});
+        ANAG.push({id:Date.now()+Math.random(),nome:entry.nome,cognome:entry.cognome,cat:'',ranking:'',genere:''});
+        added++;
+      }
+    }
+  });
+  save();saveAnag();renderParts();updateStats();renderAnag();
+  _sondaggioRows=[];
+  document.getElementById('sondaggio-txt').value='';
+  document.getElementById('sondaggio-review').innerHTML='';
+  closeModal('modal-sondaggio-import');
+  alert('✅ Aggiunti '+added+' partecipanti dal sondaggio.');
 }
 
 // Toggle qual panel

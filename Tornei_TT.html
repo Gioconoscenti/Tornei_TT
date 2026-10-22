@@ -509,7 +509,8 @@ tr:hover td{background:var(--bg3)}
       <label>Incolla qui i nomi del sondaggio (uno per riga) — anche nomi parziali o in ordine diverso vanno bene</label>
       <textarea id="sondaggio-txt" rows="7" placeholder="Mario Rossi&#10;Lucia B.&#10;Gianni Verdi"></textarea>
     </div>
-    <div style="display:flex;justify-content:flex-end;margin-bottom:4px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;flex-wrap:wrap;gap:6px">
+      <button class="btn btn-ghost btn-sm" onclick="dimenticaAliasSondaggio()" title="Svuota le associazioni ricordate dai sondaggi precedenti">🗑 Dimentica associazioni</button>
       <button class="btn btn-gold btn-sm" onclick="analizzaSondaggio()">🔍 Trova corrispondenze</button>
     </div>
     <div id="sondaggio-review"></div>
@@ -545,6 +546,12 @@ const save=()=>{try{localStorage.setItem('tts_torneo',JSON.stringify(S));}catch(
 let ANAG=[]; // [{id,nome,cat}]
 try{const r=localStorage.getItem('tts_anag');if(r)ANAG=JSON.parse(r);}catch(e){}
 const saveAnag=()=>{try{localStorage.setItem('tts_anag',JSON.stringify(ANAG));}catch(e){}};
+
+// Memoria delle associazioni "testo del sondaggio -> persona in Anagrafica" confermate in
+// precedenza (vedi analizzaSondaggio/confermaSondaggio) — { normStr(raw): id_anagrafica }
+let ALIAS={};
+try{const r=localStorage.getItem('tts_alias');if(r)ALIAS=JSON.parse(r);}catch(e){}
+const saveAlias=()=>{try{localStorage.setItem('tts_alias',JSON.stringify(ALIAS));}catch(e){}};
 
 /* ── NAVIGATION ────────────────────────────────────── */
 document.querySelectorAll('.nav-tab').forEach(btn=>{
@@ -2049,18 +2056,38 @@ let _sondaggioRows=[]; // [{raw, matchId, score, checked}]
 function analizzaSondaggio(){
   const righe=document.getElementById('sondaggio-txt').value.split('\n').map(l=>l.trim()).filter(Boolean);
   if(!righe.length){alert('Incolla prima i nomi del sondaggio, uno per riga.');return;}
+  let aliasChanged=false;
   _sondaggioRows=righe.map(raw=>{
+    // Associazione già confermata in un sondaggio precedente: salta il confronto fuzzy
+    // e usa direttamente quella (a meno che la persona non esista più in Anagrafica).
+    const key=normStr(raw);
+    const aliasId=ALIAS[key];
+    if(aliasId!==undefined){
+      if(ANAG.find(a=>String(a.id)===String(aliasId))){
+        return{raw,matchId:aliasId,score:1,remembered:true,checked:!sondaggioAlready(aliasId)};
+      }
+      delete ALIAS[key];aliasChanged=true;
+    }
     let best=null,bestScore=0;
     ANAG.forEach(p=>{const s=matchScore(raw,p);if(s>bestScore){bestScore=s;best=p;}});
     const matchId=best&&bestScore>=SONDAGGIO_SOGLIA?best.id:'';
-    return{raw,matchId,score:best?bestScore:0,checked:!sondaggioAlready(matchId)};
+    return{raw,matchId,score:best?bestScore:0,remembered:false,checked:!sondaggioAlready(matchId)};
   });
+  if(aliasChanged)saveAlias();
   renderSondaggioReview();
 }
 function onSondaggioMatchChange(i,val){
   _sondaggioRows[i].matchId=val;
+  _sondaggioRows[i].remembered=false;
   _sondaggioRows[i].checked=!sondaggioAlready(val);
   renderSondaggioReview();
+}
+function dimenticaAliasSondaggio(){
+  if(!Object.keys(ALIAS).length){alert('Nessuna associazione salvata al momento.');return;}
+  if(!confirm('Dimenticare tutte le associazioni "nome sondaggio → persona" salvate finora?'))return;
+  ALIAS={};saveAlias();
+  if(_sondaggioRows.length)analizzaSondaggio();
+  alert('✅ Associazioni dimenticate.');
 }
 function onSondaggioCheckChange(i,checked){_sondaggioRows[i].checked=checked;}
 function renderSondaggioReview(){
@@ -2081,6 +2108,7 @@ function renderSondaggioReview(){
         <option value="">— Nuovo partecipante —</option>
         ${opts}
       </select>
+      ${row.remembered?'<span style="font-size:.68rem;color:var(--gold);flex-shrink:0;white-space:nowrap">🧠 ricordato</span>':''}
       ${already?'<span style="font-size:.68rem;color:var(--green);flex-shrink:0;white-space:nowrap">già nel torneo</span>':''}
     </div>`;
   }).join('');
@@ -2089,7 +2117,7 @@ function renderSondaggioReview(){
 }
 function confermaSondaggio(){
   if(!_sondaggioRows.length){alert('Incolla prima i nomi e premi "Trova corrispondenze".');return;}
-  let added=0;
+  let added=0,aliasChanged=false;
   _sondaggioRows.forEach(row=>{
     if(!row.checked)return;
     if(row.matchId){
@@ -2097,6 +2125,9 @@ function confermaSondaggio(){
       if(p){
         S.parts.push({id:Date.now()+Math.random(),nome:p.nome,cognome:p.cognome||'',cat:p.cat||'',ranking:p.ranking||'',genere:p.genere||''});
         added++;
+        // Ricorda l'abbinamento (confermato, auto o corretto a mano) per i prossimi sondaggi
+        const key=normStr(row.raw);
+        if(ALIAS[key]!==p.id){ALIAS[key]=p.id;aliasChanged=true;}
       }
     } else {
       // Nessuna corrispondenza: crea un nuovo partecipante, aggiunto anche in Anagrafica
@@ -2104,12 +2135,15 @@ function confermaSondaggio(){
       const entry={nome:row.raw};
       migraNomeCognome(entry);
       if(fullName(entry)){
+        const anagId=Date.now()+Math.random();
         S.parts.push({id:Date.now()+Math.random(),nome:entry.nome,cognome:entry.cognome,cat:'',ranking:'',genere:''});
-        ANAG.push({id:Date.now()+Math.random(),nome:entry.nome,cognome:entry.cognome,cat:'',ranking:'',genere:''});
+        ANAG.push({id:anagId,nome:entry.nome,cognome:entry.cognome,cat:'',ranking:'',genere:''});
         added++;
+        ALIAS[normStr(row.raw)]=anagId;aliasChanged=true;
       }
     }
   });
+  if(aliasChanged)saveAlias();
   save();saveAnag();renderParts();updateStats();renderAnag();
   _sondaggioRows=[];
   document.getElementById('sondaggio-txt').value='';

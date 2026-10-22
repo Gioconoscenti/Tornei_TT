@@ -38,6 +38,7 @@ main{padding:22px;max-width:1340px;margin:0 auto}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
 .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}
 
 /* INPUTS */
 input,select,textarea{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);color:var(--text);padding:7px 11px;font-family:'Barlow',sans-serif;font-size:.88rem;width:100%;outline:none;transition:border-color .18s}
@@ -201,6 +202,7 @@ tr:hover td{background:var(--bg3)}
   .grid2{grid-template-columns:1fr;}
   .grid3{grid-template-columns:1fr 1fr;}
   .grid4{grid-template-columns:1fr 1fr;}
+  .grid5{grid-template-columns:1fr 1fr;}
   .qual-cols{grid-template-columns:1fr 1fr;}
   .nav-tab span{display:none;}
   header{padding:0 12px;gap:8px;}
@@ -219,6 +221,7 @@ tr:hover td{background:var(--bg3)}
   main{padding:10px 8px;}
   .grid3{grid-template-columns:1fr;}
   .grid4{grid-template-columns:1fr;}
+  .grid5{grid-template-columns:1fr;}
   .qual-cols{grid-template-columns:1fr;}
   .stat-row{gap:6px;}
   .stat-box{padding:8px 10px;min-width:70px;}
@@ -309,7 +312,8 @@ tr:hover td{background:var(--bg3)}
       </div>
     </div>
     <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-      <input id="anag-nome" placeholder="Nome" style="flex:2;min-width:140px" onkeydown="if(event.key==='Enter')addAnag()">
+      <input id="anag-nome" placeholder="Nome" style="flex:2;min-width:120px" onkeydown="if(event.key==='Enter')addAnag()">
+      <input id="anag-cognome" placeholder="Cognome" style="flex:2;min-width:120px" onkeydown="if(event.key==='Enter')addAnag()">
       <input id="anag-cat" placeholder="Categoria" style="flex:1;min-width:80px" onkeydown="if(event.key==='Enter')addAnag()">
       <input id="anag-ranking" placeholder="Ranking" style="flex:1;min-width:90px" onkeydown="if(event.key==='Enter')addAnag()">
       <select id="anag-genere" style="flex:1;min-width:90px">
@@ -340,8 +344,9 @@ tr:hover td{background:var(--bg3)}
 
   <div class="card">
     <div class="card-title">Aggiungi Partecipante</div>
-    <div class="grid4">
-      <div class="fg"><label>Nome</label><input id="i-nome" placeholder="Es. Mario Rossi" onkeydown="if(event.key==='Enter')addPart()"></div>
+    <div class="grid5">
+      <div class="fg"><label>Nome</label><input id="i-nome" placeholder="Es. Mario" onkeydown="if(event.key==='Enter')addPart()"></div>
+      <div class="fg"><label>Cognome</label><input id="i-cognome" placeholder="Es. Rossi" onkeydown="if(event.key==='Enter')addPart()"></div>
       <div class="fg"><label>Categoria</label><input id="i-cat" placeholder="Es. 5" onkeydown="if(event.key==='Enter')addPart()"></div>
       <div class="fg"><label>Ranking</label><input id="i-ranking" placeholder="Es. 1200" onkeydown="if(event.key==='Enter')addPart()"></div>
       <div class="fg"><label>Genere</label>
@@ -466,8 +471,8 @@ tr:hover td{background:var(--bg3)}
     </div>
     <div style="text-align:center;color:var(--text2);font-size:.8rem;margin:8px 0">— oppure incolla testo —</div>
     <div class="fg">
-      <label>Una riga per giocatore — formato: Nome;Categoria;Ranking;Genere (gli ultimi due sono opzionali)</label>
-      <textarea id="anag-import-txt" rows="7" placeholder="Mario Rossi;5;1200;M&#10;Lucia Bianchi;4;1100;F&#10;Giovanni Verdi"></textarea>
+      <label>Una riga per giocatore — formato: Nome;Cognome;Categoria;Ranking;Genere (gli ultimi tre sono opzionali)</label>
+      <textarea id="anag-import-txt" rows="7" placeholder="Mario;Rossi;5;1200;M&#10;Lucia;Bianchi;4;1100;F&#10;Giovanni;Verdi"></textarea>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end">
       <button class="btn btn-ghost" onclick="closeModal('modal-anag-import')">Annulla</button>
@@ -500,8 +505,8 @@ tr:hover td{background:var(--bg3)}
   <div class="modal">
     <h3>📋 Importa Lista</h3>
     <div class="fg">
-      <label>Una riga per giocatore — formato: Nome;Categoria;Ranking;Genere (gli ultimi due sono opzionali)</label>
-      <textarea id="import-txt" rows="10" placeholder="Mario Rossi;5;1200;M&#10;Lucia Bianchi;4;1100;F&#10;Giovanni Verdi"></textarea>
+      <label>Una riga per giocatore — formato: Nome;Cognome;Categoria;Ranking;Genere (gli ultimi tre sono opzionali)</label>
+      <textarea id="import-txt" rows="10" placeholder="Mario;Rossi;5;1200;M&#10;Lucia;Bianchi;4;1100;F&#10;Giovanni;Verdi"></textarea>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end">
       <button class="btn btn-ghost" onclick="closeModal('modal-import')">Annulla</button>
@@ -552,12 +557,14 @@ document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{
 /* ── PARTECIPANTI ──────────────────────────────────── */
 function addPart(){
   const nome=document.getElementById('i-nome').value.trim();
-  if(!nome)return;
+  const cognome=document.getElementById('i-cognome').value.trim();
+  if(!nome&&!cognome)return;
   const cat=document.getElementById('i-cat').value.trim()||'';
   const ranking=document.getElementById('i-ranking').value.trim()||'';
   const genere=document.getElementById('i-genere').value||'';
-  S.parts.push({id:Date.now()+Math.random(),nome,cat,ranking,genere});
+  S.parts.push({id:Date.now()+Math.random(),nome,cognome,cat,ranking,genere});
   document.getElementById('i-nome').value='';
+  document.getElementById('i-cognome').value='';
   document.getElementById('i-cat').value='';
   document.getElementById('i-ranking').value='';
   document.getElementById('i-genere').value='';
@@ -583,10 +590,14 @@ function sortParts(field){
   if(field==='cat'||field==='ranking'){
     S.parts.sort((a,b)=>{
       const c=String(a[field]||'').localeCompare(String(b[field]||''),undefined,{numeric:true});
-      return c!==0?c:a.nome.localeCompare(b.nome);
+      return c!==0?c:fullName(a).localeCompare(fullName(b));
     });
   } else {
-    S.parts.sort((a,b)=>a.nome.localeCompare(b.nome));
+    // Alfabetico: per Cognome e poi Nome, come in Anagrafica
+    S.parts.sort((a,b)=>{
+      const c=String(a.cognome||'').localeCompare(String(b.cognome||''));
+      return c!==0?c:String(a.nome||'').localeCompare(String(b.nome||''));
+    });
   }
   save();renderParts();
 }
@@ -609,10 +620,11 @@ function updateStats(val){
 function renderParts(){
   const w=document.getElementById('parts-wrap');
   if(!S.parts.length){w.innerHTML='<div class="empty">Nessun partecipante.</div>';return;}
-  let h='<table><thead><tr><th>#</th><th>Nome</th><th>Cat</th><th>Ranking</th><th>Genere</th><th></th></tr></thead><tbody>';
+  let h='<table><thead><tr><th>#</th><th>Nome</th><th>Cognome</th><th>Cat</th><th>Ranking</th><th>Genere</th><th></th></tr></thead><tbody>';
   S.parts.forEach((p,i)=>{
     h+=`<tr><td style="color:var(--text2);width:28px">${i+1}</td>
       <td>${esc(p.nome)}</td>
+      <td>${esc(p.cognome||'—')}</td>
       <td><span class="badge badge-cat">${esc(p.cat||'—')}</span></td>
       <td>${esc(p.ranking||'—')}</td>
       <td>${esc(p.genere||'—')}</td>
@@ -623,8 +635,8 @@ function renderParts(){
 }
 function importLista(){
   document.getElementById('import-txt').value.split('\n').map(l=>l.trim()).filter(Boolean).forEach(l=>{
-    const[nome,cat='',ranking='',genere='']= l.split(';').map(x=>x.trim());
-    if(nome)S.parts.push({id:Date.now()+Math.random(),nome,cat,ranking,genere});
+    const[nome,cognome='',cat='',ranking='',genere='']= l.split(';').map(x=>x.trim());
+    if(nome||cognome)S.parts.push({id:Date.now()+Math.random(),nome,cognome,cat,ranking,genere});
   });
   save();renderParts();updateStats();closeModal('modal-import');
 }
@@ -705,7 +717,9 @@ function genRR(players){
 /* ── CLASSIFICA ────────────────────────────────────── */
 function computeClass(g){
   const st={};
-  g.parts.forEach(p=>{st[p.id]={id:p.id,nome:p.nome,cat:String(p.cat||''),ranking:String(p.ranking||''),punti:0,sv:0,sp:0};});
+  // .nome qui è il nome completo "Nome Cognome": è l'identità con cui il giocatore finisce
+  // nel tabellone, nel pannello qualificati e in Classifica (vedi fullName()).
+  g.parts.forEach(p=>{st[p.id]={id:p.id,nome:fullName(p),cat:String(p.cat||''),ranking:String(p.ranking||''),punti:0,sv:0,sp:0};});
   g.incontri.forEach(inc=>{
     if(inc.s1===null)return;
     const[s1,s2]=[Number(inc.s1),Number(inc.s2)];
@@ -832,7 +846,7 @@ function renderEditGironi(c){
       ondrop="egDrop(event,${gi})">
       <div class="edit-girone-col-title">⬤ ${g.nome} <span style="color:var(--text2);font-weight:400">(${g.parts.length})</span></div>`;
     g.parts.forEach((p,pi)=>{
-      const nome=p.nome||'?';
+      const nome=fullName(p)||'?';
       const cat=p.cat||'';
       const otherOpts=gNames.map((n,oi)=>oi!==gi?`<option value="${oi}">${n}</option>`:'').join('');
       html+=`<div class="drag-player" draggable="true" id="dp-${gi}-${pi}"
@@ -905,7 +919,7 @@ function renderGironeContent(g,gi){
     if(inc.p1==='riposo'||inc.p2==='riposo'){
       const real=pm[inc.p1==='riposo'?inc.p2:inc.p1];
       inH+=`<div class="incontro-inline">
-        <span class="incontro-nome" style="flex:1;color:var(--text2)">${esc(real?.nome||'?')}</span>
+        <span class="incontro-nome" style="flex:1;color:var(--text2)">${esc(real?fullName(real):'?')}</span>
         <span class="score-inp" style="display:inline-flex;align-items:center;justify-content:center;opacity:.55;cursor:default">X</span>
         <span class="incontro-nome" style="text-align:right;color:var(--text2);font-style:italic">riposo</span>
       </div>`;
@@ -921,7 +935,7 @@ function renderGironeContent(g,gi){
       <span class="incontro-nome${w1?' win':''}"
         onclick="inlineVinc(${gi},${ii},${JSON.stringify(String(inc.p1))})"
         title="Clicca per assegnare la vittoria">
-        ${w1?'🏆 ':''}${esc(p1?.nome||'?')}
+        ${w1?'🏆 ':''}${esc(p1?fullName(p1):'?')}
       </span>
       <div class="score-box">
         <input class="score-inp" type="number" min="0" max="99" placeholder="—"
@@ -939,7 +953,7 @@ function renderGironeContent(g,gi){
       <span class="incontro-nome${w2?' win':''}" style="text-align:right"
         onclick="inlineVinc(${gi},${ii},${JSON.stringify(String(inc.p2))})"
         title="Clicca per assegnare la vittoria">
-        ${esc(p2?.nome||'?')}${w2?' 🏆':''}
+        ${esc(p2?fullName(p2):'?')}${w2?' 🏆':''}
       </span>
     </div>`;
   });
@@ -1472,10 +1486,10 @@ function pdfGironi(){
     let inT=`<table><thead><tr><th>G.</th><th>Giocatore 1</th><th>Risultato</th><th>Giocatore 2</th><th>Vincitore</th></tr></thead><tbody>`;
     g.incontri.forEach(inc=>{
       const isRiposo=inc.p1==='riposo'||inc.p2==='riposo';
-      const p1name=inc.p1==='riposo'?'X':(pm[inc.p1]?.nome||'?');
-      const p2name=inc.p2==='riposo'?'X':(pm[inc.p2]?.nome||'?');
+      const p1name=inc.p1==='riposo'?'X':(pm[inc.p1]?fullName(pm[inc.p1]):'?');
+      const p2name=inc.p2==='riposo'?'X':(pm[inc.p2]?fullName(pm[inc.p2]):'?');
       const res=isRiposo?'riposo':(inc.s1!==null?`${inc.s1} – ${inc.s2}`:'– vs –');
-      const vname=inc.vinc?(pm[inc.vinc]?.nome||''):'';
+      const vname=inc.vinc?(pm[inc.vinc]?fullName(pm[inc.vinc]):''):'';
       inT+=`<tr><td>${inc.gior}</td><td>${esc(p1name)}</td>
         <td style="text-align:center;font-weight:700">${res}</td>
         <td>${esc(p2name)}</td>
@@ -1543,6 +1557,18 @@ function pdfTabellone(){
 /* ── UTILS ─────────────────────────────────────────── */
 const pMap=()=>{const m={};S.parts.forEach(p=>m[p.id]=p);return m;};
 const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+// Nome e cognome sono campi separati nei dati; ovunque serva un'unica stringa da mostrare
+// (incontri, tabellone, classifica, PDF) si usa questo, nell'ordine fisso "Nome Cognome".
+const fullName=p=>(((p&&p.nome)||'')+' '+((p&&p.cognome)||'')).trim();
+// Migrazione dati pre-esistenti: un "nome" salvato prima dell'introduzione del campo
+// Cognome conteneva il nome completo (es. "Mario Rossi") — lo dividiamo in automatico,
+// assumendo che l'ultima parola sia il cognome. Idempotente: non tocca chi ha già .cognome.
+function migraNomeCognome(p){
+  if(!p||p.cognome!==undefined)return;
+  const parole=String(p.nome||'').trim().split(/\s+/).filter(Boolean);
+  if(parole.length>1){p.cognome=parole.pop();p.nome=parole.join(' ');}
+  else p.cognome='';
+}
 
 /* ── EXPORT / IMPORT / RESET ──────────────────────── */
 function exportTorneo(){
@@ -1654,7 +1680,7 @@ function assegnaPuntiClassifica(){
   const label=prompt('Nome del torneo (per lo storico in Classifica):',new Date().toLocaleDateString('it-IT'));
   if(label===null)return; // annullato
 
-  const catByNome={};S.parts.forEach(p=>{catByNome[p.nome]=p.cat;});
+  const catByNome={};S.parts.forEach(p=>{catByNome[fullName(p)]=p.cat;});
   const deltas={}; // nomeLower -> {nome,punti}
   boards.forEach(b=>{
     const ris=risultatiTabellone(S.tabelloni[b]);
@@ -1757,6 +1783,11 @@ function exportClassificaCsv(){
 
 /* ── INIT ──────────────────────────────────────────── */
 if(!S.numGironi)S.numGironi=2;
+// Migra eventuali dati salvati prima dell'introduzione del campo Cognome (vedi migraNomeCognome)
+ANAG.forEach(migraNomeCognome);
+S.parts.forEach(migraNomeCognome);
+S.gironi.forEach(g=>g.parts.forEach(migraNomeCognome));
+save();saveAnag();
 renderParts();updateStats();
 renderAnag();
 renderClassifica();
@@ -1764,12 +1795,14 @@ renderClassifica();
 /* ── ANAGRAFICA ────────────────────────────────────── */
 function addAnag(){
   const nome=document.getElementById('anag-nome').value.trim();
-  if(!nome)return;
+  const cognome=document.getElementById('anag-cognome').value.trim();
+  if(!nome&&!cognome)return;
   const cat=document.getElementById('anag-cat').value.trim()||'';
   const ranking=document.getElementById('anag-ranking').value.trim()||'';
   const genere=document.getElementById('anag-genere').value||'';
-  ANAG.push({id:Date.now()+Math.random(),nome,cat,ranking,genere});
+  ANAG.push({id:Date.now()+Math.random(),nome,cognome,cat,ranking,genere});
   document.getElementById('anag-nome').value='';
+  document.getElementById('anag-cognome').value='';
   document.getElementById('anag-cat').value='';
   document.getElementById('anag-ranking').value='';
   document.getElementById('anag-genere').value='';
@@ -1780,22 +1813,27 @@ function removeAnag(id){ANAG=ANAG.filter(p=>p.id!==id);saveAnag();renderAnag();}
 function editAnag(id,field,val){const p=ANAG.find(x=>x.id===id);if(p){p[field]=val;saveAnag();}}
 function sortAnag(field){
   if(field==='cat'||field==='ranking'){
-    // Ordina per categoria/ranking, poi per nome a parità
+    // Ordina per categoria/ranking, poi per cognome+nome a parità
     ANAG.sort((a,b)=>{
       const c=String(a[field]||'').localeCompare(String(b[field]||''),undefined,{numeric:true});
-      return c!==0?c:a.nome.localeCompare(b.nome);
+      return c!==0?c:fullName(a).localeCompare(fullName(b));
     });
   } else {
-    ANAG.sort((a,b)=>a.nome.localeCompare(b.nome));
+    // Alfabetico: convenzione da registro, per Cognome e poi Nome
+    ANAG.sort((a,b)=>{
+      const c=String(a.cognome||'').localeCompare(String(b.cognome||''));
+      return c!==0?c:String(a.nome||'').localeCompare(String(b.nome||''));
+    });
   }
   saveAnag();renderAnag();
 }
 function clearAnag(){if(!confirm("Svuotare tutta l'anagrafica?"))return;ANAG=[];saveAnag();renderAnag();}
 function importAnag(){
   document.getElementById('anag-import-txt').value.split('\n').map(l=>l.trim()).filter(Boolean).forEach(l=>{
-    const[nome,cat='',ranking='',genere='']= l.split(';').map(x=>x.trim());
-    if(nome&&!ANAG.find(p=>p.nome.toLowerCase()===nome.toLowerCase()))
-      ANAG.push({id:Date.now()+Math.random(),nome,cat,ranking,genere});
+    const[nome,cognome='',cat='',ranking='',genere='']= l.split(';').map(x=>x.trim());
+    const key=(nome+' '+cognome).trim().toLowerCase();
+    if(key&&!ANAG.find(p=>fullName(p).toLowerCase()===key))
+      ANAG.push({id:Date.now()+Math.random(),nome,cognome,cat,ranking,genere});
   });
   saveAnag();renderAnag();closeModal('modal-anag-import');
 }
@@ -1803,7 +1841,7 @@ function renderAnag(){
   const w=document.getElementById('anag-wrap');
   if(!w)return;
   if(!ANAG.length){w.innerHTML='<div class="empty">Nessun giocatore in anagrafica.</div>';return;}
-  let h='<table><thead><tr><th>#</th><th>Nome</th><th>Cat</th><th>Ranking</th><th>Genere</th><th></th></tr></thead><tbody>';
+  let h='<table><thead><tr><th>#</th><th>Nome</th><th>Cognome</th><th>Cat</th><th>Ranking</th><th>Genere</th><th></th></tr></thead><tbody>';
   ANAG.forEach((p,i)=>{
     const inlineStyle='background:transparent;border:none;border-bottom:1px solid var(--border);border-radius:0;padding:2px 4px;color:var(--text)';
     const genOpt=g=>`<option value="${g}" ${p.genere===g?'selected':''}>${g||'—'}</option>`;
@@ -1811,6 +1849,8 @@ function renderAnag(){
       <td style="color:var(--text2);width:28px">${i+1}</td>
       <td><input value="${esc(p.nome)}" style="${inlineStyle};width:100%"
         onchange="editAnag(${p.id},'nome',this.value)"></td>
+      <td><input value="${esc(p.cognome||'')}" style="${inlineStyle};width:100%"
+        onchange="editAnag(${p.id},'cognome',this.value)"></td>
       <td><input value="${esc(p.cat||'')}" placeholder="—" style="${inlineStyle};width:60px"
         onchange="editAnag(${p.id},'cat',this.value)"></td>
       <td><input value="${esc(p.ranking||'')}" placeholder="—" style="${inlineStyle};width:70px"
@@ -1835,8 +1875,8 @@ function exportAnagJson(){
 
 function exportAnagCsv(){
   if(!ANAG.length){alert('Anagrafica vuota.');return;}
-  const header='Nome;Categoria;Ranking;Genere';
-  const rows=ANAG.map(p=>`${p.nome.replace(/;/g,',')};${(p.cat||'').replace(/;/g,',')};${(p.ranking||'').replace(/;/g,',')};${(p.genere||'').replace(/;/g,',')}`);
+  const header='Nome;Cognome;Categoria;Ranking;Genere';
+  const rows=ANAG.map(p=>`${(p.nome||'').replace(/;/g,',')};${(p.cognome||'').replace(/;/g,',')};${(p.cat||'').replace(/;/g,',')};${(p.ranking||'').replace(/;/g,',')};${(p.genere||'').replace(/;/g,',')}`);
   const csv=[header,...rows].join('\n');
   const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a');
@@ -1857,25 +1897,38 @@ function importAnagFile(evt){
         const data=JSON.parse(content);
         if(!Array.isArray(data))throw new Error('Il file JSON deve contenere un array');
         data.forEach(p=>{
-          const nome=String(p.nome||'').trim();
-          const cat=String(p.cat||'').trim();
-          const ranking=String(p.ranking||'').trim();
-          const genere=String(p.genere||'').trim();
-          if(!nome)return;
+          const entry={nome:String(p.nome||'').trim(),cat:String(p.cat||'').trim(),
+            ranking:String(p.ranking||'').trim(),genere:String(p.genere||'').trim()};
+          if('cognome' in p)entry.cognome=String(p.cognome||'').trim();
+          migraNomeCognome(entry); // backup pre-Cognome: divide il nome completo in automatico
+          const key=fullName(entry).toLowerCase();
+          if(!key)return;
           total++;
-          if(!ANAG.find(x=>x.nome.toLowerCase()===nome.toLowerCase())){
-            ANAG.push({id:Date.now()+Math.random(),nome,cat,ranking,genere});added++;
+          if(!ANAG.find(x=>fullName(x).toLowerCase()===key)){
+            ANAG.push({id:Date.now()+Math.random(),...entry});added++;
           }
         });
       } else {
-        // CSV
-        content.replace(/^\ufeff/,'').split('\n').forEach((line,i)=>{
-          if(i===0&&line.toLowerCase().startsWith('nome'))return; // salta header
-          const[nome,cat='',ranking='',genere='']= line.split(';').map(x=>x.trim());
-          if(!nome)return;
+        // CSV \u2014 rileva dall'header se \u00e8 un file "vecchio" (senza colonna Cognome) per restare
+        // compatibile con backup esportati prima dell'introduzione del campo
+        const lines=content.replace(/^\ufeff/,'').split('\n');
+        const headerCols=(lines[0]||'').toLowerCase().split(';').map(x=>x.trim());
+        const hasCognomeCol=headerCols[1]==='cognome';
+        lines.forEach((line,i)=>{
+          if(i===0&&headerCols[0]==='nome')return; // salta header
+          let nome,cognome,cat,ranking,genere;
+          if(hasCognomeCol){
+            [nome,cognome='',cat='',ranking='',genere='']= line.split(';').map(x=>x.trim());
+          } else {
+            [nome,cat='',ranking='',genere='']= line.split(';').map(x=>x.trim());
+            const entry={nome};migraNomeCognome(entry);
+            nome=entry.nome;cognome=entry.cognome;
+          }
+          const key=(nome+' '+cognome).trim().toLowerCase();
+          if(!key)return;
           total++;
-          if(!ANAG.find(x=>x.nome.toLowerCase()===nome.toLowerCase())){
-            ANAG.push({id:Date.now()+Math.random(),nome,cat,ranking,genere});added++;
+          if(!ANAG.find(x=>fullName(x).toLowerCase()===key)){
+            ANAG.push({id:Date.now()+Math.random(),nome,cognome,cat,ranking,genere});added++;
           }
         });
       }
@@ -1890,18 +1943,18 @@ function importAnagFile(evt){
 
 function renderAnagPicker(){
   const filter=(document.getElementById('anag-filter')?.value||'').toLowerCase();
-  const alreadyNomi=new Set(S.parts.map(p=>p.nome.toLowerCase()));
-  const list=ANAG.filter(p=>!filter||p.nome.toLowerCase().includes(filter)||String(p.cat).toLowerCase().includes(filter));
+  const alreadyNomi=new Set(S.parts.map(p=>fullName(p).toLowerCase()));
+  const list=ANAG.filter(p=>!filter||fullName(p).toLowerCase().includes(filter)||String(p.cat).toLowerCase().includes(filter));
   const container=document.getElementById('anag-picker-list');
   if(!container)return;
   if(!list.length){container.innerHTML='<div class="empty" style="padding:16px">Nessun giocatore trovato.</div>';updatePickCount();return;}
   container.innerHTML=list.map(p=>{
-    const already=alreadyNomi.has(p.nome.toLowerCase());
+    const already=alreadyNomi.has(fullName(p).toLowerCase());
     return`<label class="anag-item${already?' already':''}">
-      <input type="checkbox" data-anid="${p.id}" data-nome="${esc(p.nome)}" data-cat="${esc(p.cat||'')}"
+      <input type="checkbox" data-anid="${p.id}" data-nome="${esc(p.nome)}" data-cognome="${esc(p.cognome||'')}" data-cat="${esc(p.cat||'')}"
         data-ranking="${esc(p.ranking||'')}" data-genere="${esc(p.genere||'')}"
         ${already?'disabled checked':''} onchange="updatePickCount()">
-      <span class="an-nome">${esc(p.nome)}</span>
+      <span class="an-nome">${esc(fullName(p))}</span>
       ${p.cat?`<span class="an-cat">${esc(p.cat)}</span>`:''}
       ${p.ranking?`<span class="an-cat">${esc(p.ranking)}</span>`:''}
       ${p.genere?`<span class="an-cat">${esc(p.genere)}</span>`:''}
@@ -1919,7 +1972,7 @@ function anagPickNone(){document.querySelectorAll('#anag-picker-list input[type=
 function addFromAnag(){
   const checked=document.querySelectorAll('#anag-picker-list input[type=checkbox]:checked:not(:disabled)');
   if(!checked.length){alert('Seleziona almeno un giocatore.');return;}
-  checked.forEach(cb=>{S.parts.push({id:Date.now()+Math.random(),nome:cb.dataset.nome,cat:cb.dataset.cat,ranking:cb.dataset.ranking||'',genere:cb.dataset.genere||''});});
+  checked.forEach(cb=>{S.parts.push({id:Date.now()+Math.random(),nome:cb.dataset.nome,cognome:cb.dataset.cognome||'',cat:cb.dataset.cat,ranking:cb.dataset.ranking||'',genere:cb.dataset.genere||''});});
   save();renderParts();updateStats();
   closeModal('modal-anagrafica-pick');
 }

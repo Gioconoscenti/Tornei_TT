@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Torneo Manager is a single-file web app for ASD Tennistavolo San Polo (Parma) to run table-tennis tournaments: round-robin groups ("gironi") followed by a single-elimination bracket ("tabellone"). It's built to run entirely client-side with zero install: open `Tornei_TT.html` in a browser, no server, no account, no build step. All state lives in the browser's `localStorage`.
 
-The full user-facing workflow and business rules are documented in `Manuale_TorneoManager.pdf` (Italian) — read it (`pdftotext -layout Manuale_TorneoManager.pdf -` works in this environment) before changing tie-break logic, bracket seeding, or the import/export formats, since those are user-visible contracts described there.
+The full user-facing workflow and business rules are documented in `Manuale_TorneoManager.pdf` (Italian) — read it (`pdftotext -layout Manuale_TorneoManager.pdf -` works in this environment) before changing tie-break logic, bracket seeding, or the import/export formats, since those are user-visible contracts described there. It currently predates the Nome/Cognome split (screenshots and the "Nome;Categoria;Ranking;Genere" import format it shows are one field short) — regenerate it (see below) next time it's otherwise due for an update, no need to do it just for this.
 
 ## Repository layout
 
@@ -31,8 +31,8 @@ There is no build/lint/test pipeline. Useful commands during development:
 
 ### Two independent persistence stores
 
-- `S` (`localStorage['tts_torneo']`) — the current tournament: `{parts, numGironi, gironi, tabelloni:{A,B}, qualAssign}`. Reset per-tournament. Each entry in `parts` is `{id, nome, cat, ranking, genere}` — all four fields feed `creaGironi()`'s distribution and the girone tie-break cascade in `computeClass()` (see below).
-- `ANAG` (`localStorage['tts_anag']`) — the club's permanent player roster, same shape as a `parts` entry (`{id, nome, cat, ranking, genere}`). Survives tournament resets and import/export of `S`; managed entirely separately in the "Anagrafica" tab.
+- `S` (`localStorage['tts_torneo']`) — the current tournament: `{parts, numGironi, gironi, tabelloni:{A,B}, qualAssign}`. Reset per-tournament. Each entry in `parts` is `{id, nome, cognome, cat, ranking, genere}` — `cat`/`ranking`/`genere` feed `creaGironi()`'s distribution and the girone tie-break cascade in `computeClass()` (see below).
+- `ANAG` (`localStorage['tts_anag']`) — the club's permanent player roster, same shape as a `parts` entry (`{id, nome, cognome, cat, ranking, genere}`). Survives tournament resets and import/export of `S`; managed entirely separately in the "Anagrafica" tab.
 - `CLASS` (`localStorage['tts_classifica']`) — the season-long points leaderboard: `[{id, nome, cat, punti, storico:[{data, torneo, punti}]}]`. Independent of `S`/`ANAG`, never reset by a single tournament. Unlike everything else in the app, rows are matched by **name** (lowercased), not id — there's no stable identifier for a player across separate tournaments (each tournament's `S.parts` ids are freshly generated), so this is the one place name collisions are an accepted, unavoidable limitation rather than a bug to fix. `importClassificaJson()` fully **replaces** `CLASS` (like `importTorneo()` replaces `S`, with the same overwrite confirm) rather than merging — unlike Anagrafica's import, which skips duplicates and adds the rest, merging cumulative point totals safely isn't a well-defined operation so this app doesn't attempt it.
 
 Both are saved via small `save()`/`saveAnag()` wrappers called after every mutation — there's no reactive framework, so **every function that mutates `S` or `ANAG` must explicitly call the matching save + a `render*()` call**, or the UI/localStorage will silently drift out of sync.
@@ -41,6 +41,12 @@ Both are saved via small `save()`/`saveAnag()` wrappers called after every mutat
 
 Every participant gets `id: Date.now()+Math.random()` when added (in `addPart`/`addAnag`/`addFromAnag`). This `id` is the key used everywhere data must stay unambiguous across two players who happen to share a name — critically in `S.qualAssign` (board A/B/excluded assignment, keyed by id) and in girone standings (`computeClass` keys its stats dict by `p.id`).
 The **bracket itself** (`S.tabelloni[board].rounds[][].p1/p2/win`) is the one place that still stores the player's **name** as a plain string, not id — this was a deliberate, scoped trade-off (see git history) rather than an oversight: bracket slot propagation is purely positional (round/match index), so name collisions don't corrupt match results there, only cosmetic seed labels. Don't assume the rest of the codebase is name-keyed just because the bracket is.
+
+### Nome/Cognome: split at the source, combined everywhere else
+
+A participant's `nome` (first name) and `cognome` (surname) are separate, independently editable fields in Anagrafica and Partecipanti (forms, tables, sort, import/export) — but every place downstream that needs a *single* display/identity string (girone incontri, `computeClass()`'s output `.nome`, the bracket, `S.qualAssign` labels, Classifica, both PDF exports) uses `fullName(p)=((p.nome||'')+' '+(p.cognome||'')).trim()` in the fixed "Nome Cognome" order — there's no user-facing toggle for the opposite order. Concretely: `computeClass(g)` sets each row's `.nome` to `fullName(p)`, not the raw first name, so everything that consumes a girone's standings (the bracket builder, qualification panel, tie-break notes, PDF) gets the combined name "for free" without needing its own `fullName()` call. `pMap()`-based lookups (girone incontri rendering, `pdfGironi()`'s incontri table) do need an explicit `fullName()` call since they read straight from `S.parts`.
+
+Saved data from before this split only has `nome` (holding what used to be the full name). `migraNomeCognome(p)` — run once at startup over `ANAG`, `S.parts`, and every `S.gironi[].parts` entry, and again per-row on JSON import when the source object has no `cognome` key, and per-line on CSV import when the header has no `Cognome` column — splits it in place: the last whitespace-separated word becomes `cognome`, the rest stays `nome`. It's idempotent (a no-op once `p.cognome !== undefined`), so it's safe to call on data that's already split.
 
 ### Section/tab navigation
 
